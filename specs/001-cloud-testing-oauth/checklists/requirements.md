@@ -31,7 +31,7 @@
 
 ## Validation Results
 
-**Last Updated**: 2026-01-02 (Updated with two-tier test strategy, fork PR security, bootstrap utility, and OAuth scopes)
+**Last Updated**: 2026-01-02 (Simplified: removed automated fixture validation, simplified token health to pre-flight check, added GitHub Environment protection, softened resource isolation guarantees)
 
 ### Content Quality Review
 
@@ -53,21 +53,21 @@
 
 ✅ **Technology-agnostic criteria**: Success criteria focus on user outcomes (time to setup, credential validity, immediate abort on failure, CI completion time) without mentioning Python, uv, or specific libraries.
 
-✅ **Acceptance scenarios defined**: All five user stories include acceptance scenarios in Given-When-Then format (5 for two-tier strategy US0, 3 for local testing US1, 5 for GitHub Actions US2 with fork security, 3 for cloud agent US3, 5 for proof-of-concept US4), with emphasis on two-tier testing, authentication failure handling, fork PR security, and proof-of-concept validation.
+✅ **Acceptance scenarios defined**: All seven user stories include acceptance scenarios in Given-When-Then format (5 for two-tier strategy US0, 3 for local testing US1, 5 for GitHub Actions US2 with Environment protection, 1 for credential pre-flight check US2.5, 3 for cloud agent US3, 5 for proof-of-concept US4, 5 for test resource isolation US5), with emphasis on two-tier testing, pre-flight checks, authentication failure handling, GitHub Environment-based approval, resource isolation, and proof-of-concept validation.
 
-✅ **Edge cases identified**: Twenty-five edge cases organized by category (Two-Tier Testing: 4, OAuth & Authentication: 9, GitHub Actions & Fork PRs: 4, Google API & Resources: 8) covering fixture issues, test categorization, credential handling, fork PR security, scope denial, Workspace restrictions, quota limits, and document access issues.
+✅ **Edge cases identified**: Twenty-four edge cases organized by category (Two-Tier Testing & Fixtures: 5, OAuth & Authentication: 10, GitHub Actions & Environment Protection: 4, Google API & Resources: 7, Test Resource Isolation & Cleanup: 7) covering fixture staleness, test categorization, credential handling, pre-flight check failures, GitHub Environment approval, scope denial, Workspace restrictions, quota limits, document access issues, resource conflicts, cleanup failures, and orphaned resources.
 
 ✅ **Clear scope**: The spec explicitly limits to single-user authentication (FR-006), defines three distinct testing environments (local, GitHub Actions, cloud agent), and clarifies that credential persistence is controlled by Google's policies (not the project).
 
-✅ **Assumptions documented**: Seventeen assumptions listed covering Google account types (Gmail/Workspace), GitHub secrets, cloud agent capabilities, OAuth client credentials, API quotas, two-tier testing strategy (fixtures for Tier A, real APIs for Tier B), OAuth flow acceptability, Google's control of credential persistence, human intervention requirements, safe test abortion, OAuth scopes (documents + drive.file), proof-of-concept document accessibility, fork PR security posture, and maintainer review requirements.
+✅ **Assumptions documented**: Assumptions listed covering Google account types (Gmail/Workspace with admin OAuth permissions), GitHub Environment protection, cloud agent capabilities, OAuth client credentials, API quotas, two-tier testing strategy (fixtures for Tier A, real APIs for Tier B), OAuth flow acceptability, Google's control of credential persistence, human intervention requirements, safe test abortion, OAuth scopes (documents + drive.file), proof-of-concept document accessibility, PR security (all PRs require approval for credentials), maintainer review requirements, manual fixture updates, API evolution expectations, token expiry risks (especially for non-production apps), pre-flight check effectiveness, resource operation reliability, best-effort cleanup acceptance, orphaned resource cleanup needs, test run unique identification (timestamp + random), and storage quota sufficiency.
 
 ### Feature Readiness Review
 
-✅ **Requirements have acceptance criteria**: All 39 functional requirements are paired with acceptance scenarios in the user stories or can be directly tested (e.g., FR-001 about two-tier testing can be verified by running Tier A without credentials, FR-027 about same-repo PR detection can be tested by creating PRs from different sources, FR-036 can be tested by running the proof-of-concept test and verifying "Gondwana" extraction).
+✅ **Requirements have acceptance criteria**: All 44 functional requirements are paired with acceptance scenarios in the user stories or can be directly tested (e.g., FR-019 about pre-flight check can be verified by simulating invalid credentials, FR-029 about GitHub Environment approval can be tested by creating PRs, FR-032 about resource isolation can be tested by running parallel test suites).
 
-✅ **User scenarios comprehensive**: Five prioritized user stories (P0: Two-Tier Strategy, P1: Local Testing, P1-High: Proof-of-Concept, P2: GitHub Actions with fork security, P3: Cloud Agent) cover all major flows with clear independent testing strategies, explicit handling of credential failures, fork PR security, and end-to-end validation.
+✅ **User scenarios comprehensive**: Seven prioritized user stories (P0: Two-Tier Strategy, P1: Local Testing and Credential Pre-Flight Check, P2: GitHub Actions with Environment protection and Test Resource Isolation, P1-High: Proof-of-Concept, P3: Cloud Agent) cover all major flows with clear independent testing strategies, explicit handling of credential failures, GitHub Environment-based security, pre-flight validation, best-effort resource cleanup, and end-to-end validation.
 
-✅ **Measurable outcomes achieved**: Eighteen success criteria map directly to the five user stories and functional requirements, providing clear validation targets with emphasis on fail-fast behavior, two-tier testing accessibility (SC-012, SC-013), fork PR security (SC-015, SC-016, SC-017), bootstrap utility usability (SC-014), OAuth scope minimization (SC-018), and proof-of-concept validation (SC-009, SC-010, SC-011).
+✅ **Measurable outcomes achieved**: Twenty-three success criteria map directly to the seven user stories and functional requirements, providing clear validation targets with emphasis on pre-flight checks (SC-005, SC-006), two-tier testing accessibility (SC-013, SC-014), GitHub Environment approval (SC-016, SC-017, SC-018, SC-019), bootstrap utility usability (SC-015), OAuth scope minimization (SC-020), test resource isolation with acceptable conflict rates (SC-021, SC-022, SC-023), and proof-of-concept validation (SC-010, SC-011, SC-012).
 
 ✅ **No implementation leakage**: The spec successfully avoids mentioning Python, uv, pytest, specific OAuth libraries, or file formats. It remains focused on capabilities and outcomes.
 
@@ -77,46 +77,30 @@ All validation items passed successfully. The specification is ready for the nex
 - `/speckit.plan` - To create detailed implementation plan
 - `/speckit.clarify` - Not needed (no clarifications required)
 
-### Key Updates from User Feedback
+### Key Simplifications Applied
 
-1. **Credential Persistence**: Removed assumption that project controls credential duration. Now clearly states Google's OAuth policies determine persistence (SC-002, Assumptions).
+1. **Removed Automated Fixture Validation**: Eliminated FR-006 to FR-010 (automated fixture validation, scheduling, drift detection, alerting, regeneration tooling). Replaced with simple assumption that fixtures are manually updated by developers monitoring Google API changes. This removes the circular dependency where fixture validation requires credentials but exists to enable credential-free testing.
 
-2. **Fail-Fast on Auth Errors**: All acceptance scenarios now specify immediate test abortion when credentials fail or are rejected (FR-009, FR-014, FR-017, SC-005).
+2. **Simplified User Story 2.5**: Changed from "Refresh Token Health Monitoring" (5 acceptance scenarios, 4 FRs) to "Credential Pre-Flight Check" (1 acceptance scenario, 3 FRs). Now just a simple upfront API call to validate credentials before running Tier B tests. Removed complex mid-execution detection, multi-environment messaging coordination, and token monitoring infrastructure.
 
-3. **No Auto-Recovery**: Added explicit requirement that system must NOT retry or attempt automatic recovery on credential rejection (FR-017).
+3. **GitHub Environment Protection for All PRs**: Changed from fork-only manual approval (FR-036: same-repo automatic, FR-038: fork manual trigger) to universal approval (FR-029: all PRs require maintainer approval via GitHub Environment). This is simpler to implement (built-in GitHub feature), more secure (protects against compromised accounts and malicious dependencies), and eliminates complex fork detection logic.
 
-4. **Human Re-Auth Required**: All error scenarios now clearly state that human user must re-authenticate when credentials are invalid (all P1/P2/P3 acceptance scenario #3).
+4. **Softened Resource Isolation Guarantees**: Changed from "MUST prevent" and "100% isolation" (FR-044, SC-025) to "SHOULD minimize conflicts" and "<1% conflict rate" (FR-033, SC-021). Changed cleanup from "MUST flag orphaned resources" (FR-043, SC-027) to "SHOULD attempt best-effort cleanup" (FR-035, SC-023) with acknowledgment that manual cleanup may be needed. This recognizes practical limitations of force-kill, network failures, and race conditions.
 
-5. **Additional Edge Cases**: Added mid-execution failure and long-running test token expiration scenarios.
+5. **Removed Orphan Tracking Infrastructure**: Eliminated automated orphaned resource identification and flagging system. Replaced with simple assumption that periodic manual cleanup is acceptable using Google Drive interface.
 
-6. **Proof-of-Concept Integration Test (User Story 4)**: Added high-priority P1 story that validates end-to-end OAuth and Google Docs API integration by reading a specific document (ID: 1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4) and extracting the first word "Gondwana".
+6. **Reduced Edge Cases**: From 39 edge cases to 24 by removing automated fixture validation edge cases (3 removed), token monitoring service failures (3 removed), and fork-specific PR workflow edge cases (replaced with simpler Environment approval cases).
 
-7. **New Functional Requirements (FR-018 to FR-023)**: Six new requirements specifically for proof-of-concept test covering document target, expected result, error handling, and authentication flow consistency.
+7. **Reduced Functional Requirements**: From 54 FRs to 44 FRs by removing automated fixture validation (5 FRs), complex token monitoring (4 FRs merged into 3 simpler pre-flight FRs), and fork-specific workflow complexity (2 FRs consolidated into environment-based approach).
 
-8. **New Key Entity**: Added Proof-of-Concept Test entity describing test structure, target document, expected result, and error classification.
+8. **Reduced Success Criteria**: From 28 SCs to 23 SCs by removing fixture validation metrics (SC-019, SC-020, SC-021), complex token monitoring guarantees (SC-022, SC-023, SC-024 replaced with simpler SC-005, SC-006), and orphan tracking guarantees (SC-027 removed, SC-025 relaxed to SC-021).
 
-9. **Enhanced Success Criteria**: Added three new success criteria (SC-009, SC-010, SC-011) validating proof-of-concept test performance (under 5 seconds), reliability (100% pass rate with valid credentials), and error diagnostics.
+9. **Updated Workspace Admin Assumption**: Changed FR-026 to explicitly acknowledge that bootstrap utility requires Google Workspace administrators to allow third-party OAuth applications, recognizing this is outside the application's control.
 
-10. **Document-Specific Edge Cases**: Added four edge cases for proof-of-concept test covering document inaccessibility, content changes, empty documents, and permission errors.
-
-11. **Two-Tier Test Strategy (User Story 0)**: Added P0-Foundation user story defining Tier A (credential-free, fixture-based) and Tier B (credential-required, live API) testing to enable cloud agent contributions and security.
-
-12. **Fork PR Security & Manual Triggers**: Updated GitHub Actions user story (US2) with fork PR security requirements, automatic Tier B test gating for fork PRs, and manual maintainer-triggered workflow support.
-
-13. **OAuth Scopes Specification**: Added functional requirements (FR-020 to FR-022) defining minimal OAuth scopes needed for Google Docs and Drive CRUD operations (documents + drive.file or drive).
-
-14. **Bootstrap Utility Requirements**: Added functional requirements (FR-023 to FR-025) for bootstrap utility that guides OAuth setup, supports Gmail and Workspace accounts, and outputs credentials for local and CI use.
-
-15. **GitHub Actions Security Requirements**: Added functional requirements (FR-026 to FR-030) ensuring Tier A tests run on all PRs, Tier B tests only run on same-repo PRs, fork PRs skip Tier B with clear messaging, and maintainers can manually trigger reviewed fork PRs.
-
-16. **Enhanced Edge Cases**: Reorganized edge cases into four categories with 25 total cases covering two-tier testing issues, OAuth problems, fork PR security scenarios, and Google API resource problems.
-
-17. **New Success Criteria**: Added seven new success criteria (SC-012 to SC-018) validating two-tier accessibility, cloud agent contributions, bootstrap usability, fork PR security, manual trigger speed, credential protection, and OAuth scope minimization.
-
-The specification demonstrates high quality:
-- Clear user-centric prioritization (P1→P2→P3 with justifications)
-- Comprehensive edge case coverage anticipating real-world OAuth and testing challenges
-- Well-defined assumptions that make implicit decisions explicit, including Google's control over credential lifecycle
+The simplified specification demonstrates pragmatic quality:
+- Clear user-centric prioritization (P0→P1→P2→P3 with justifications)
+- Focused edge case coverage for real-world OAuth challenges
+- Well-defined assumptions acknowledging practical limitations
 - Technology-agnostic language that enables implementation flexibility
-- Measurable success criteria with emphasis on security (fail-fast, zero tests on bad credentials)
-- Explicit fail-fast behavior preventing tests from running with invalid authentication
+- Measurable success criteria with realistic targets (95% cleanup, <1% conflicts instead of 100% perfection)
+- Simple, proven solutions (GitHub Environments, pre-flight checks) over complex custom infrastructure

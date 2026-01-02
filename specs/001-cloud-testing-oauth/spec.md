@@ -10,7 +10,7 @@
 
 ### User Story 0 - Two-Tier Test Strategy (Priority: P0 - Foundation)
 
-The project must support two distinct tiers of testing to enable development by cloud agents, local developers, and CI systems with varying levels of credential access. Tier A tests run without any Google credentials (using fixtures and mocks), while Tier B tests run against real Google APIs requiring valid OAuth credentials.
+The project must support two distinct tiers of testing to enable development by cloud agents, local developers, and CI systems with varying levels of credential access. Tier A tests run without any Google credentials (using fixtures and mocks), while Tier B tests run against real Google APIs requiring valid OAuth credentials. Fixtures are manually maintained by developers monitoring Google API changes.
 
 **Why this priority**: This is the foundational architecture that enables all other testing scenarios. Without Tier A (credential-free) tests, cloud agents cannot contribute code safely. Without Tier B (credential-required) tests, we cannot validate real API integration. This distinction is critical for security and accessibility.
 
@@ -44,19 +44,33 @@ A developer working on the extended-google-doc-utils library needs to run unit a
 
 ### User Story 2 - GitHub Actions CI/CD Testing (Priority: P2)
 
-The project maintainer wants automated tests to run on every pull request and push to main branch using GitHub Actions. The CI environment should authenticate using pre-configured credentials stored as GitHub secrets, run the full test suite, and report results without manual intervention. To protect credentials, integration tests (Tier B) must only run automatically for pull requests from branches within the same repository, not from forks. For fork pull requests, maintainers can manually trigger integration tests after reviewing the code.
+The project maintainer wants automated tests to run on every pull request and push to main branch using GitHub Actions. The CI environment should authenticate using pre-configured credentials stored in a protected GitHub Environment. To protect credentials from malicious code, all Tier B tests require manual approval from a maintainer before running, regardless of whether the PR comes from a fork or same-repo branch.
 
-**Why this priority**: Automated CI/CD testing provides continuous quality assurance and prevents regressions. This builds on local testing (P1) by adding automation, making it the logical next step after establishing the testing foundation. Fork PR security is critical to prevent untrusted code from accessing credentials.
+**Why this priority**: Automated CI/CD testing provides continuous quality assurance and prevents regressions. This builds on local testing (P1) by adding automation, making it the logical next step after establishing the testing foundation. Environment-based approval protects credentials from untrusted code without complex workflow logic.
 
-**Independent Test**: Can be fully tested by creating pull requests from both same-repo branches and forks, verifying that integration tests run automatically for same-repo PRs, skip for fork PRs, and can be manually triggered by maintainers for fork PRs.
+**Independent Test**: Can be fully tested by creating pull requests from both same-repo branches and forks, verifying that Tier A tests run automatically, Tier B tests require approval, and credentials are never exposed to untrusted code.
 
 **Acceptance Scenarios**:
 
-1. **Given** GitHub secrets are configured with valid OAuth credentials and a PR is created from a branch in the same repository, **When** the PR targets the main branch, **Then** Tier A tests run automatically, Tier B tests run automatically with authentication, and all results are visible in the PR
-2. **Given** a pull request is created from a forked repository, **When** the PR targets the main branch, **Then** Tier A tests run automatically but Tier B tests are skipped with a clear message indicating they require maintainer approval
-3. **Given** a pull request from a fork has been reviewed by a maintainer, **When** the maintainer manually triggers the integration test workflow, **Then** Tier B tests execute with credentials and results are visible in the PR
+1. **Given** a PR is created (from any source), **When** the PR is opened, **Then** Tier A tests run automatically without requiring approval
+2. **Given** a PR is created (from any source), **When** Tier B tests are triggered, **Then** they wait for maintainer approval via GitHub Environment protection before executing
+3. **Given** a maintainer has reviewed a PR, **When** the maintainer approves the Tier B test environment, **Then** Tier B tests execute with credentials and results are visible in the PR
 4. **Given** tests are running in GitHub Actions, **When** a test fails, **Then** the workflow fails and reports the specific test failures
-5. **Given** the refresh token in GitHub secrets is invalid or expired, **When** GitHub Actions attempts to run Tier B tests, **Then** all Tier B tests are immediately aborted, the workflow fails, and a clear error message indicates that a human user must update the GitHub secrets with fresh OAuth credentials
+5. **Given** the refresh token in GitHub Environment secrets is invalid or expired, **When** a maintainer approves Tier B tests, **Then** all Tier B tests are immediately aborted, the workflow fails, and a clear error message indicates that a maintainer must update the environment secrets with fresh OAuth credentials
+
+---
+
+### User Story 2.5 - Credential Pre-Flight Check (Priority: P1)
+
+Before running any Tier B tests, the system performs a quick validation check to ensure credentials are valid. This prevents wasting time running tests that will all fail due to authentication issues. Google frequently revokes OAuth tokens for non-production projects, making this pre-flight check valuable for developer experience.
+
+**Why this priority**: A simple up-front check catches the most common failure mode (invalid credentials) immediately, providing clear actionable error messages before any tests run. This is a straightforward quality-of-life improvement that saves developer time.
+
+**Independent Test**: Can be fully tested by simulating invalid credentials and verifying that the pre-flight check detects the issue before any Tier B tests execute.
+
+**Acceptance Scenarios**:
+
+1. **Given** credentials are configured but invalid or expired, **When** the test suite starts, **Then** a pre-flight API call is made, it fails, and all Tier B tests are skipped with a clear message indicating re-authentication is required and providing bootstrap command instructions
 
 ---
 
@@ -94,14 +108,33 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 
 ---
 
+### User Story 5 - Test Resource Isolation (Priority: P2)
+
+Integration tests (Tier B) should create and manage their own isolated Google Docs and Drive resources dynamically to minimize conflicts between parallel test executions. Tests running simultaneously in different environments (local developer machines, multiple CI jobs, multiple cloud agents) should use unique resource identifiers to avoid interfering with each other. Best-effort cleanup prevents resource accumulation, though some orphaned resources may require periodic manual cleanup.
+
+**Why this priority**: Shared test resources create race conditions and flaky tests. When multiple test runs modify the same Google Doc simultaneously, results become unpredictable. Dynamic resource creation with unique identifiers enables parallel execution and reliable results, particularly when running multiple cloud coding agents simultaneously.
+
+**Independent Test**: Can be fully tested by running multiple test suites simultaneously (local + CI, or multiple cloud agents) and verifying that each creates resources with unique identifiers, tests complete successfully with minimal conflicts, and most resources are cleaned up afterward.
+
+**Acceptance Scenarios**:
+
+1. **Given** multiple Tier B test runs execute simultaneously, **When** tests create Google Docs and Drive resources, **Then** each test run uses unique identifiers (timestamp + random suffix) to minimize resource conflicts
+2. **Given** a Tier B test run starts, **When** the test creates a Google Doc for testing, **Then** the document is uniquely identified to reduce the likelihood of conflicts with other test runs
+3. **Given** a Tier B test run completes successfully, **When** cleanup executes, **Then** the system attempts to delete all dynamically created test resources
+4. **Given** a test run fails or is interrupted by force-kill or network failure, **When** cleanup is attempted, **Then** best-effort cleanup runs but some orphaned resources may remain and require periodic manual cleanup
+5. **Given** the proof-of-concept test uses a specific hardcoded Google Doc, **When** other integration tests run, **Then** they create their own isolated resources and do not depend on the proof-of-concept document
+
+---
+
 ### Edge Cases
 
-#### Two-Tier Testing
+#### Two-Tier Testing & Fixtures
 
 - What happens when Tier A tests are run but fixtures are missing or corrupted?
 - What happens when a test is incorrectly categorized as Tier A but attempts to make network calls?
 - What happens when Tier B tests are run without credentials in a local development environment?
 - What happens when both Tier A and Tier B tests are run together and credentials are invalid?
+- What happens when Google changes their API response schema and fixtures become stale?
 
 #### OAuth & Authentication
 
@@ -112,15 +145,16 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 - What happens when environment variables for OAuth credentials are malformed or incomplete?
 - What happens when the requested OAuth scopes are denied by the user during authentication?
 - What happens when a Google Workspace administrator has blocked the OAuth application?
-- What happens when authentication fails partway through a test suite execution?
+- What happens when the pre-flight credential check fails but Tier B tests are still executed?
 - What happens when the access token expires during a long-running single test?
+- What happens when a refresh token is regenerated but not all environments are updated?
 
-#### GitHub Actions & Fork PRs
+#### GitHub Actions & Environment Protection
 
-- What happens when a fork PR is created and integration tests are skipped but the PR author expects them to run?
-- What happens when a maintainer manually triggers integration tests for a fork PR but credentials are invalid?
-- What happens when a same-repo PR is created from a branch with malicious code that attempts to exfiltrate credentials?
-- What happens when GitHub secrets are accidentally deleted while integration tests are running?
+- What happens when a PR author expects Tier B tests to run automatically but they require approval?
+- What happens when a maintainer approves Tier B tests but credentials are invalid?
+- What happens when GitHub Environment secrets are accidentally deleted while integration tests are running?
+- What happens when multiple PRs are waiting for environment approval simultaneously?
 
 #### Google API & Resources
 
@@ -131,6 +165,16 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 - What happens when the Google Doc has no content or is empty?
 - What happens when the user's Google account doesn't have permission to access the test document?
 - What happens when requested OAuth scopes are insufficient for the operations being tested?
+
+#### Test Resource Isolation & Cleanup
+
+- What happens when parallel test runs attempt to create resources with the same name?
+- What happens when a test fails before cleanup can delete its created resources?
+- What happens when cleanup fails due to API rate limits or quota exhaustion?
+- What happens when orphaned test resources accumulate over time?
+- What happens when the test account runs out of Google Drive storage space?
+- What happens when cleanup attempts to delete resources that are still in use by another test?
+- What happens when a test run is forcibly terminated (killed process) before cleanup?
 
 ## Requirements *(mandatory)*
 
@@ -154,47 +198,58 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 - **FR-011**: System MUST support single-user authentication only (no multi-user credential management)
 - **FR-012**: System MUST automatically refresh expired access tokens using stored refresh tokens when refresh tokens are valid
 - **FR-013**: System MUST clearly differentiate between local development mode (interactive OAuth) and automated mode (environment-based OAuth)
-- **FR-014**: System MUST immediately abort all tests when authentication fails or credentials are rejected
+- **FR-014**: System MUST immediately abort all Tier B tests when authentication fails or credentials are rejected
 - **FR-015**: System MUST provide clear error messages when authentication fails, indicating that human re-authentication is required
 - **FR-016**: System MUST support configuration of OAuth credentials through environment variables for automated environments
 - **FR-017**: System MUST prevent storage of OAuth credentials in version control
-- **FR-018**: System MUST validate OAuth credentials before attempting to run tests
-- **FR-019**: System MUST NOT attempt automatic recovery or retry when credentials are rejected or invalid
+- **FR-018**: System MUST NOT attempt automatic recovery or retry when refresh tokens are rejected or invalid
+
+#### Credential Pre-Flight Check
+
+- **FR-019**: Before executing any Tier B tests, the system MUST perform a single test API call to validate credentials
+- **FR-020**: If the pre-flight check fails, all Tier B tests MUST be skipped with a clear error message indicating re-authentication is required and providing bootstrap command instructions
+- **FR-021**: The pre-flight check SHOULD complete in under 2 seconds to minimize impact on test suite startup time
 
 #### OAuth Scopes & Permissions
 
-- **FR-020**: System MUST request OAuth scopes that enable full CRUD (Create, Read, Update, Delete) operations on Google Docs
-- **FR-021**: System MUST request OAuth scopes that enable file management operations on Google Drive
-- **FR-022**: System MUST use the minimal set of OAuth scopes necessary for Google Docs and Drive CRUD operations
+- **FR-022**: System MUST request OAuth scopes that enable full CRUD (Create, Read, Update, Delete) operations on Google Docs
+- **FR-023**: System MUST request OAuth scopes that enable file management operations on Google Drive
+- **FR-024**: System MUST use the minimal set of OAuth scopes necessary for Google Docs and Drive CRUD operations
 
 #### Bootstrap & Credential Setup
 
-- **FR-023**: System MUST provide a bootstrap utility that guides users through initial OAuth authentication to obtain a refresh token
-- **FR-024**: Bootstrap utility MUST support both consumer Gmail accounts and Google Workspace accounts
-- **FR-025**: Bootstrap utility MUST output credentials in a format suitable for both local development and CI environments
+- **FR-025**: System MUST provide a bootstrap utility that guides users through initial OAuth authentication to obtain a refresh token
+- **FR-026**: Bootstrap utility MUST support both consumer Gmail accounts and Google Workspace accounts where administrators allow third-party OAuth applications
+- **FR-027**: Bootstrap utility MUST output credentials in a format suitable for both local development and CI environments
 
 #### GitHub Actions Integration
 
-- **FR-026**: GitHub Actions workflows MUST run Tier A tests automatically on all pull requests regardless of source (same-repo or fork)
-- **FR-027**: GitHub Actions workflows MUST run Tier B tests automatically only on pull requests from branches within the same repository
-- **FR-028**: GitHub Actions workflows MUST skip Tier B tests on pull requests from forked repositories with a clear message
-- **FR-029**: GitHub Actions workflows MUST support manual triggering of Tier B tests by maintainers for reviewed fork pull requests
-- **FR-030**: GitHub Actions workflows MUST NOT expose credentials to untrusted fork pull request code
+- **FR-028**: GitHub Actions workflows MUST run Tier A tests automatically on all pull requests regardless of source
+- **FR-029**: GitHub Actions workflows MUST run Tier B tests only after manual approval via GitHub Environment protection
+- **FR-030**: GitHub Environment protection MUST be configured to require maintainer approval before exposing credentials to any PR code
+- **FR-031**: Tier B tests waiting for environment approval MUST display a clear message indicating maintainer approval is required
+
+#### Test Resource Isolation & Cleanup
+
+- **FR-032**: Tier B integration tests SHOULD create isolated Google Docs and Drive resources dynamically for each test run
+- **FR-033**: Each test run SHOULD uniquely identify its resources using a combination of timestamp and random suffix to minimize conflicts
+- **FR-034**: Test resources created during a test run SHOULD be automatically cleaned up (deleted) when tests complete successfully
+- **FR-035**: When a test run fails or is interrupted, the system SHOULD attempt best-effort cleanup, with the understanding that force-kill or network failures may leave orphaned resources requiring periodic manual cleanup
+- **FR-036**: Only the proof-of-concept test MAY use a hardcoded document for validation purposes; all other integration tests MUST create their own isolated resources dynamically
 
 #### Project Structure & Compatibility
 
-- **FR-031**: Project structure MUST be compatible with standard package managers and dependency management tools
-- **FR-032**: Tests MUST be discoverable and executable through standard test runners
-- **FR-033**: System MUST abort test execution immediately upon detecting authentication failure during test runs
+- **FR-037**: Project structure MUST be compatible with standard package managers and dependency management tools
+- **FR-038**: Tests MUST be discoverable and executable through standard test runners
 
 #### Proof-of-Concept Integration Test
 
-- **FR-034**: System MUST include a proof-of-concept integration test that reads a specific Google Doc and extracts its first word
-- **FR-035**: Proof-of-concept test MUST target the document at https://docs.google.com/document/d/1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4/edit?tab=t.0
-- **FR-036**: Proof-of-concept test MUST verify the first word of the document is "Gondwana"
-- **FR-037**: Proof-of-concept test MUST fail with a clear error if the document is inaccessible or deleted
-- **FR-038**: Proof-of-concept test MUST fail with a clear assertion error if the first word does not match "Gondwana"
-- **FR-039**: Proof-of-concept test MUST execute using the same authentication flow as all other Tier B tests
+- **FR-039**: System MUST include a proof-of-concept integration test that reads a specific Google Doc and extracts its first word
+- **FR-040**: Proof-of-concept test MUST target the document at https://docs.google.com/document/d/1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4/edit?tab=t.0
+- **FR-041**: Proof-of-concept test MUST verify the first word of the document is "Gondwana"
+- **FR-042**: Proof-of-concept test MUST fail with a clear error if the document is inaccessible or deleted
+- **FR-043**: Proof-of-concept test MUST fail with a clear assertion error if the first word does not match "Gondwana"
+- **FR-044**: Proof-of-concept test MUST execute using the same authentication flow as all other Tier B tests
 
 ### Key Entities
 
@@ -220,8 +275,18 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 - The proof-of-concept Google Doc (ID: 1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4) remains accessible and its content starts with "Gondwana"
 - The authenticated user has read permissions for the proof-of-concept Google Doc
 - The proof-of-concept test serves as a smoke test to validate the entire authentication and API integration chain
-- Fork pull requests cannot be automatically trusted with repository secrets
-- Maintainers review fork pull requests before manually triggering integration tests
+- Pull requests cannot be automatically trusted with repository credentials without review
+- GitHub Environment protection provides a simple mechanism for credential approval
+- Maintainers review pull requests before approving Tier B test execution
+- Fixtures are manually updated by developers monitoring Google API changes
+- Google API response formats may change over time requiring fixture updates
+- Refresh tokens may expire or be revoked at any time due to Google policies or user actions, particularly for non-production OAuth applications
+- A simple pre-flight credential check catches most authentication failures before tests run
+- Test resource creation and deletion operations through Google APIs are generally reliable but may occasionally fail
+- Best-effort cleanup is acceptable; some test failures or interruptions may result in orphaned resources requiring periodic manual cleanup
+- Test runs can use timestamp + random suffix combinations to minimize resource conflicts in parallel execution
+- The test Google account has sufficient Google Drive storage quota for dynamic resource creation across parallel test runs
+- Google Workspace administrators allow third-party OAuth applications for development accounts
 
 ## Success Criteria *(mandatory)*
 
@@ -231,17 +296,22 @@ A developer or automated test runner needs to verify that the OAuth authenticati
 - **SC-002**: Subsequent local test runs execute without requiring re-authentication as long as Google's OAuth policies allow credential persistence
 - **SC-003**: GitHub Actions workflows authenticate and complete test suites in under 10 minutes per run when credentials are valid
 - **SC-004**: Cloud agents authenticate and execute tests without human intervention 100% of the time when credentials are valid
-- **SC-005**: Authentication failures immediately abort all tests with zero tests executing on invalid credentials
-- **SC-006**: Authentication failure error messages provide actionable guidance that enables resolution within 2 minutes
-- **SC-007**: Zero OAuth credentials are committed to version control (verified through automated checks)
-- **SC-008**: Test execution succeeds across all three environments (local, GitHub Actions, cloud agent) using the same test suite when credentials are valid
-- **SC-009**: Proof-of-concept integration test successfully reads the target Google Doc and extracts "Gondwana" as the first word in under 5 seconds
-- **SC-010**: Proof-of-concept test passes 100% of the time when valid credentials exist and the document is accessible
-- **SC-011**: Proof-of-concept test provides clear failure diagnostics distinguishing between authentication errors, document access errors, and content assertion errors
-- **SC-012**: Tier A tests execute successfully without credentials 100% of the time in all environments (local, GitHub Actions, cloud agents)
-- **SC-013**: Cloud agents can run Tier A tests and contribute code without requiring access to OAuth credentials
-- **SC-014**: Bootstrap utility guides users through OAuth setup and outputs valid credentials in under 5 minutes for both Gmail and Workspace accounts
-- **SC-015**: Fork pull requests trigger Tier A tests automatically but Tier B tests are skipped 100% of the time without manual approval
-- **SC-016**: Maintainers can manually trigger Tier B tests for reviewed fork PRs in under 1 minute
-- **SC-017**: Zero credentials are exposed to untrusted fork PR code (verified through security audits)
-- **SC-018**: OAuth scopes requested enable all required Google Docs and Drive CRUD operations without requesting unnecessary permissions
+- **SC-005**: Pre-flight credential check detects invalid credentials and skips all Tier B tests with clear error message 100% of the time
+- **SC-006**: Pre-flight check completes in under 2 seconds
+- **SC-007**: Authentication failure error messages provide actionable guidance including bootstrap command instructions
+- **SC-008**: Zero OAuth credentials are committed to version control (verified through automated checks)
+- **SC-009**: Test execution succeeds across all three environments (local, GitHub Actions, cloud agent) using the same test suite when credentials are valid
+- **SC-010**: Proof-of-concept integration test successfully reads the target Google Doc and extracts "Gondwana" as the first word in under 5 seconds
+- **SC-011**: Proof-of-concept test passes 100% of the time when valid credentials exist and the document is accessible
+- **SC-012**: Proof-of-concept test provides clear failure diagnostics distinguishing between authentication errors, document access errors, and content assertion errors
+- **SC-013**: Tier A tests execute successfully without credentials 100% of the time in all environments (local, GitHub Actions, cloud agents)
+- **SC-014**: Cloud agents can run Tier A tests and contribute code without requiring access to OAuth credentials
+- **SC-015**: Bootstrap utility guides users through OAuth setup and outputs valid credentials in under 5 minutes for both Gmail and Workspace accounts
+- **SC-016**: All pull requests trigger Tier A tests automatically without requiring approval
+- **SC-017**: All pull requests requiring Tier B tests wait for maintainer approval via GitHub Environment protection
+- **SC-018**: Maintainers can approve Tier B test execution in under 1 minute via GitHub UI
+- **SC-019**: Zero credentials are exposed to PR code before maintainer approval (verified through GitHub Environment configuration)
+- **SC-020**: OAuth scopes requested enable all required Google Docs and Drive CRUD operations without requesting unnecessary permissions
+- **SC-021**: Parallel test runs (including multiple cloud agents) create resources with unique identifiers achieving less than 1% conflict rate
+- **SC-022**: Test cleanup successfully deletes created resources in 95% of test runs
+- **SC-023**: Orphaned resources from failed cleanup can be identified and manually deleted within 5 minutes using Google Drive interface
