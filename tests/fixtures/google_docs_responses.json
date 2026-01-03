@@ -1,0 +1,32 @@
+{
+  "documents.get": {
+    "documentId": "1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4",
+    "title": "Test Document",
+    "body": {
+      "content": [
+        {
+          "paragraph": {
+            "elements": [
+              {
+                "textRun": {
+                  "content": "This is a test document.\n"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "documents.batchUpdate": {
+    "documentId": "1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4",
+    "replies": [
+      {
+        "updateParagraphStyle": {
+          "startIndex": 1,
+          "endIndex": 25
+        }
+      }
+    ]
+  }
+}

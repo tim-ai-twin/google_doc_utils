@@ -5,9 +5,9 @@ Defines the interface for loading, saving, and refreshing OAuth credentials
 from various sources (local files, environment variables).
 """
 
-from typing import Protocol, Optional
 from datetime import datetime
 from enum import Enum
+from typing import Protocol
 
 
 class CredentialSource(Enum):
@@ -82,7 +82,7 @@ class CredentialManager(Protocol):
         """
         ...
 
-    def load_credentials(self) -> Optional[OAuthCredentials]:
+    def load_credentials(self) -> OAuthCredentials | None:
         """
         Load credentials from appropriate source based on environment.
 
@@ -133,7 +133,7 @@ class CredentialManager(Protocol):
         """
         ...
 
-    def get_credentials_for_testing(self) -> Optional[OAuthCredentials]:
+    def get_credentials_for_testing(self) -> OAuthCredentials | None:
         """
         Load and refresh credentials if needed for testing.
 

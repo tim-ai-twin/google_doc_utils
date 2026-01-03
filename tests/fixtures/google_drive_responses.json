@@ -1,0 +1,32 @@
+{
+  "about.get": {
+    "kind": "drive#about",
+    "user": {
+      "kind": "drive#user",
+      "displayName": "Test User",
+      "emailAddress": "test@example.com",
+      "permissionId": "12345678901234567890"
+    },
+    "storageQuota": {
+      "limit": "16106127360",
+      "usage": "1234567890",
+      "usageInDrive": "1000000000"
+    }
+  },
+  "files.get": {
+    "kind": "drive#file",
+    "id": "1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4",
+    "name": "Test Document",
+    "mimeType": "application/vnd.google-apps.document",
+    "createdTime": "2024-01-01T00:00:00.000Z",
+    "modifiedTime": "2024-01-02T00:00:00.000Z"
+  },
+  "files.create": {
+    "kind": "drive#file",
+    "id": "1NewDocumentId123456789",
+    "name": "New Test Document",
+    "mimeType": "application/vnd.google-apps.document",
+    "createdTime": "2024-01-03T00:00:00.000Z",
+    "modifiedTime": "2024-01-03T00:00:00.000Z"
+  }
+}

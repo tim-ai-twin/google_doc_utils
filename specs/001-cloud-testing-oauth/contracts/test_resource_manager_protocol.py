@@ -5,9 +5,10 @@ Defines the interface for managing Google Docs/Drive resources created during te
 Handles resource creation with unique IDs and best-effort cleanup.
 """
 
-from typing import Protocol, ContextManager
+from contextlib import AbstractContextManager
 from datetime import datetime
 from enum import Enum
+from typing import Protocol
 
 
 class ResourceType(Enum):
@@ -213,7 +214,7 @@ def isolated_document(
     manager: TestResourceManager,
     title_prefix: str = "test-doc",
     test_name: str | None = None
-) -> ContextManager[str]:
+) -> AbstractContextManager[str]:
     """
     Create an isolated test document with automatic cleanup.
 
@@ -237,7 +238,7 @@ def isolated_folder(
     manager: TestResourceManager,
     name_prefix: str = "test-folder",
     test_name: str | None = None
-) -> ContextManager[str]:
+) -> AbstractContextManager[str]:
     """
     Create an isolated test folder with automatic cleanup.
 

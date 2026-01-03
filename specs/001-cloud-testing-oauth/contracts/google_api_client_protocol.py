@@ -4,7 +4,8 @@ Google API Client Protocol
 Defines interfaces for Google Docs and Drive API client wrappers.
 """
 
-from typing import Protocol, Any
+from typing import Any, Protocol
+
 from credential_manager_protocol import OAuthCredentials
 
 

@@ -1,11 +1,14 @@
 """Credential management for Google API authentication."""
 
 import json
+import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 
 from ..utils.config import EnvironmentType
 
@@ -38,7 +41,7 @@ class OAuthCredentials:
         """
         if self.token_expiry is None:
             return True
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return now >= self.token_expiry
 
     def is_valid(self) -> bool:
@@ -127,7 +130,7 @@ class CredentialManager:
         """
         return self._environment_type
 
-    def load_credentials(self) -> Optional[OAuthCredentials]:
+    def load_credentials(self) -> OAuthCredentials | None:
         """Load credentials from appropriate source based on environment.
 
         Local environments load from `.credentials/token.json`.
@@ -149,7 +152,7 @@ class CredentialManager:
         else:
             return None
 
-    def _load_from_local_file(self) -> Optional[OAuthCredentials]:
+    def _load_from_local_file(self) -> OAuthCredentials | None:
         """Load credentials from .credentials/token.json.
 
         Returns:
@@ -161,7 +164,7 @@ class CredentialManager:
             return None
 
         try:
-            with open(credentials_path, "r") as f:
+            with open(credentials_path) as f:
                 data = json.load(f)
 
             # Parse token_expiry from ISO format string
@@ -176,9 +179,43 @@ class CredentialManager:
                 scopes=data["scopes"],
                 token_uri=data["token_uri"],
             )
-        except (KeyError, ValueError, json.JSONDecodeError) as e:
+        except (KeyError, ValueError, json.JSONDecodeError):
             # Return None if file is malformed or missing required fields
             return None
+
+    def _save_to_local_file(self, credentials: OAuthCredentials) -> None:
+        """Save credentials to .credentials/token.json.
+
+        Args:
+            credentials: OAuth credentials to save
+
+        Raises:
+            IOError: If file write fails
+            PermissionError: If credentials directory not writable
+        """
+        credentials_dir = Path(".credentials")
+        credentials_path = credentials_dir / "token.json"
+
+        # Create .credentials/ directory if it doesn't exist
+        credentials_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+        # Serialize credentials to JSON
+        data = {
+            "access_token": credentials.access_token,
+            "refresh_token": credentials.refresh_token,
+            "token_expiry": credentials.token_expiry.isoformat(),
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "scopes": credentials.scopes,
+            "token_uri": credentials.token_uri,
+        }
+
+        # Write to file
+        with open(credentials_path, "w") as f:
+            json.dump(data, f, indent=2)
+
+        # Set file permissions to 0600 (owner read/write only)
+        os.chmod(credentials_path, 0o600)
 
     def save_credentials(self, credentials: OAuthCredentials) -> None:
         """Save credentials to appropriate storage.
@@ -193,7 +230,14 @@ class CredentialManager:
             IOError: If file write fails
             PermissionError: If credentials directory not writable
         """
-        raise NotImplementedError("Subclasses must implement save_credentials()")
+        if self._source == CredentialSource.LOCAL_FILE:
+            self._save_to_local_file(credentials)
+        elif self._source == CredentialSource.ENVIRONMENT:
+            # Skip saving - credentials are sourced from environment variables
+            pass
+        elif self._source == CredentialSource.NONE:
+            # Skip saving - no credential source configured
+            pass
 
     def refresh_access_token(
         self, credentials: OAuthCredentials
@@ -211,9 +255,37 @@ class CredentialManager:
             ValueError: If credentials missing required fields
             IOError: If network request fails
         """
-        raise NotImplementedError("Subclasses must implement refresh_access_token()")
+        # Create a google.oauth2.credentials.Credentials object
+        google_creds = Credentials(
+            token=credentials.access_token,
+            refresh_token=credentials.refresh_token,
+            token_uri=credentials.token_uri,
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret,
+            scopes=credentials.scopes,
+        )
 
-    def get_credentials_for_testing(self) -> Optional[OAuthCredentials]:
+        # Refresh the credentials using google.auth
+        request = Request()
+        google_creds.refresh(request)
+
+        # Update the token expiry to UTC timezone-aware datetime
+        token_expiry = google_creds.expiry
+        if token_expiry and token_expiry.tzinfo is None:
+            token_expiry = token_expiry.replace(tzinfo=UTC)
+
+        # Return updated OAuthCredentials
+        return OAuthCredentials(
+            access_token=google_creds.token,
+            refresh_token=google_creds.refresh_token,
+            token_expiry=token_expiry,
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret,
+            scopes=credentials.scopes,
+            token_uri=credentials.token_uri,
+        )
+
+    def get_credentials_for_testing(self) -> OAuthCredentials | None:
         """Load and refresh credentials if needed for testing.
 
         Convenience method that:

@@ -1,8 +1,7 @@
 """Tier A tests for credential loading functionality."""
 
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -25,7 +24,7 @@ def temp_credentials_dir(tmp_path, monkeypatch):
 @pytest.fixture
 def sample_credentials_data():
     """Sample credentials data for testing."""
-    expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    expiry = datetime.now(UTC) + timedelta(hours=1)
     return {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",

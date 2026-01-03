@@ -4,8 +4,9 @@ Pre-flight Check Protocol
 Defines the interface for validating OAuth credentials before test execution.
 """
 
-from typing import Protocol
 from datetime import datetime
+from typing import Protocol
+
 from credential_manager_protocol import OAuthCredentials
 
 

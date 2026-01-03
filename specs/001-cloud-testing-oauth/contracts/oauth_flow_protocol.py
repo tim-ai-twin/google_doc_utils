@@ -6,6 +6,7 @@ specifically the desktop application flow with local callback server.
 """
 
 from typing import Protocol
+
 from credential_manager_protocol import OAuthCredentials
 
 
