@@ -7,10 +7,67 @@ from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 from ..utils.config import EnvironmentType
+
+
+class CredentialError(Exception):
+    """Base exception for credential-related errors."""
+
+    pass
+
+
+class TokenExpiredError(CredentialError):
+    """Raised when the access token is expired and cannot be refreshed."""
+
+    pass
+
+
+class TokenRevokedError(CredentialError):
+    """Raised when the refresh token has been revoked."""
+
+    def __init__(self, message: str | None = None):
+        """Initialize TokenRevokedError with helpful message.
+
+        Args:
+            message: Optional custom message
+        """
+        if message is None:
+            message = (
+                "Refresh token has been revoked. "
+                "Please re-run bootstrap_oauth.py to obtain new credentials:\n"
+                "  python scripts/bootstrap_oauth.py"
+            )
+        super().__init__(message)
+
+
+class InvalidCredentialsError(CredentialError):
+    """Raised when credentials are invalid or malformed."""
+
+    def __init__(self, message: str | None = None, details: str | None = None):
+        """Initialize InvalidCredentialsError with helpful troubleshooting.
+
+        Args:
+            message: Optional custom message
+            details: Optional additional details about the error
+        """
+        if message is None:
+            message = "Invalid credentials detected."
+
+        full_message = message
+        if details:
+            full_message += f"\nDetails: {details}"
+
+        full_message += (
+            "\n\nTroubleshooting steps:\n"
+            "1. Check that .credentials/token.json exists and is readable\n"
+            "2. Verify the JSON structure contains all required fields\n"
+            "3. If the file is corrupted, re-run: python scripts/bootstrap_oauth.py"
+        )
+        super().__init__(full_message)
 
 
 class CredentialSource(Enum):
@@ -157,6 +214,9 @@ class CredentialManager:
 
         Returns:
             OAuthCredentials if file exists and is valid, None otherwise
+
+        Raises:
+            InvalidCredentialsError: If file exists but is malformed
         """
         credentials_path = Path(".credentials/token.json")
 
@@ -179,9 +239,21 @@ class CredentialManager:
                 scopes=data["scopes"],
                 token_uri=data["token_uri"],
             )
-        except (KeyError, ValueError, json.JSONDecodeError):
-            # Return None if file is malformed or missing required fields
-            return None
+        except json.JSONDecodeError as e:
+            raise InvalidCredentialsError(
+                message="Failed to parse credentials file",
+                details=f"JSON parsing error: {e}",
+            ) from e
+        except KeyError as e:
+            raise InvalidCredentialsError(
+                message="Credentials file is missing required fields",
+                details=f"Missing field: {e}",
+            ) from e
+        except ValueError as e:
+            raise InvalidCredentialsError(
+                message="Credentials file contains invalid values",
+                details=f"Value error: {e}",
+            ) from e
 
     def _save_to_local_file(self, credentials: OAuthCredentials) -> None:
         """Save credentials to .credentials/token.json.
@@ -251,39 +323,79 @@ class CredentialManager:
             Updated credentials with new access token and expiry
 
         Raises:
-            RefreshError: If refresh token is invalid or revoked
-            ValueError: If credentials missing required fields
-            IOError: If network request fails
+            TokenRevokedError: If refresh token is invalid or revoked
+            InvalidCredentialsError: If credentials missing required fields
+            CredentialError: If network request fails or other errors occur
         """
-        # Create a google.oauth2.credentials.Credentials object
-        google_creds = Credentials(
-            token=credentials.access_token,
-            refresh_token=credentials.refresh_token,
-            token_uri=credentials.token_uri,
-            client_id=credentials.client_id,
-            client_secret=credentials.client_secret,
-            scopes=credentials.scopes,
-        )
+        # Validate credentials have required fields
+        if not credentials.is_valid():
+            missing_fields = []
+            if not credentials.access_token:
+                missing_fields.append("access_token")
+            if not credentials.refresh_token:
+                missing_fields.append("refresh_token")
+            if not credentials.client_id:
+                missing_fields.append("client_id")
+            if not credentials.client_secret:
+                missing_fields.append("client_secret")
+            if not credentials.scopes:
+                missing_fields.append("scopes")
+            if not credentials.token_uri:
+                missing_fields.append("token_uri")
 
-        # Refresh the credentials using google.auth
-        request = Request()
-        google_creds.refresh(request)
+            raise InvalidCredentialsError(
+                message="Credentials are missing required fields",
+                details=f"Missing: {', '.join(missing_fields)}",
+            )
 
-        # Update the token expiry to UTC timezone-aware datetime
-        token_expiry = google_creds.expiry
-        if token_expiry and token_expiry.tzinfo is None:
-            token_expiry = token_expiry.replace(tzinfo=UTC)
+        try:
+            # Create a google.oauth2.credentials.Credentials object
+            google_creds = Credentials(
+                token=credentials.access_token,
+                refresh_token=credentials.refresh_token,
+                token_uri=credentials.token_uri,
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret,
+                scopes=credentials.scopes,
+            )
 
-        # Return updated OAuthCredentials
-        return OAuthCredentials(
-            access_token=google_creds.token,
-            refresh_token=google_creds.refresh_token,
-            token_expiry=token_expiry,
-            client_id=credentials.client_id,
-            client_secret=credentials.client_secret,
-            scopes=credentials.scopes,
-            token_uri=credentials.token_uri,
-        )
+            # Refresh the credentials using google.auth
+            request = Request()
+            google_creds.refresh(request)
+
+            # Update the token expiry to UTC timezone-aware datetime
+            token_expiry = google_creds.expiry
+            if token_expiry and token_expiry.tzinfo is None:
+                token_expiry = token_expiry.replace(tzinfo=UTC)
+
+            # Return updated OAuthCredentials
+            return OAuthCredentials(
+                access_token=google_creds.token,
+                refresh_token=google_creds.refresh_token,
+                token_expiry=token_expiry,
+                client_id=credentials.client_id,
+                client_secret=credentials.client_secret,
+                scopes=credentials.scopes,
+                token_uri=credentials.token_uri,
+            )
+
+        except RefreshError as e:
+            # Token has been revoked or is invalid
+            raise TokenRevokedError() from e
+
+        except (OSError, IOError) as e:
+            # Network or connection error
+            raise CredentialError(
+                f"Network error while refreshing token: {e}\n"
+                "Please check your internet connection and try again."
+            ) from e
+
+        except Exception as e:
+            # Catch any other unexpected errors
+            raise CredentialError(
+                f"Unexpected error while refreshing token: {e}\n"
+                "Please try re-running: python scripts/bootstrap_oauth.py"
+            ) from e
 
     def get_credentials_for_testing(self) -> OAuthCredentials | None:
         """Load and refresh credentials if needed for testing.
@@ -298,16 +410,35 @@ class CredentialManager:
             Valid OAuth credentials ready for testing, or None if unavailable
 
         Raises:
-            RefreshError: If refresh fails
-            FileNotFoundError: If credentials not found in LOCAL environment
+            TokenRevokedError: If refresh token has been revoked - re-run bootstrap_oauth.py
+            InvalidCredentialsError: If credentials are malformed or missing fields
+            CredentialError: If network errors or other issues occur during refresh
         """
         creds = self.load_credentials()
         if creds is None:
             return None
 
+        # Validate credentials before checking expiry
+        if not creds.is_valid():
+            raise InvalidCredentialsError(
+                message="Loaded credentials are invalid",
+                details="Credential file may be corrupted or incomplete",
+            )
+
+        # Refresh expired tokens
         if creds.is_expired():
-            creds = self.refresh_access_token(creds)
-            if self.source == CredentialSource.LOCAL_FILE:
-                self.save_credentials(creds)
+            try:
+                creds = self.refresh_access_token(creds)
+                if self.source == CredentialSource.LOCAL_FILE:
+                    self.save_credentials(creds)
+            except TokenRevokedError:
+                # Re-raise with no modification - error message is already clear
+                raise
+            except InvalidCredentialsError:
+                # Re-raise with no modification - error message is already clear
+                raise
+            except CredentialError:
+                # Re-raise with no modification - error message is already clear
+                raise
 
         return creds

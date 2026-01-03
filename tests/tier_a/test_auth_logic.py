@@ -13,6 +13,7 @@ import pytest
 from extended_google_doc_utils.auth.credential_manager import (
     CredentialManager,
     CredentialSource,
+    InvalidCredentialsError,
     OAuthCredentials,
 )
 
@@ -54,7 +55,7 @@ def test_load_credentials_file_not_found(temp_credentials_dir):
 
 @pytest.mark.tier_a
 def test_load_credentials_invalid_json(temp_credentials_dir):
-    """Test that load_credentials returns None for invalid JSON.
+    """Test that load_credentials raises InvalidCredentialsError for invalid JSON.
 
     This validates error handling when the credentials file exists
     but contains malformed JSON data.
@@ -65,10 +66,12 @@ def test_load_credentials_invalid_json(temp_credentials_dir):
         f.write("not valid json{[")
 
     manager = CredentialManager(CredentialSource.LOCAL_FILE)
-    result = manager.load_credentials()
+    with pytest.raises(InvalidCredentialsError) as exc_info:
+        manager.load_credentials()
 
-    # Current implementation returns None instead of raising
-    assert result is None
+    # Verify error message is helpful
+    assert "Failed to parse credentials file" in str(exc_info.value)
+    assert "bootstrap_oauth.py" in str(exc_info.value)
 
 
 @pytest.mark.tier_a

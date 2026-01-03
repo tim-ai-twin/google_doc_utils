@@ -17,6 +17,8 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "manual: Manual/interactive tests requiring human interaction"
     )
+    # Initialize pre-flight result storage
+    config.preflight_result = None
 
 
 def _credentials_available() -> bool:
@@ -41,10 +43,17 @@ def _credentials_available() -> bool:
 
 
 def pytest_runtest_setup(item):
-    """Auto-skip Tier B tests if credentials are unavailable."""
+    """Auto-skip Tier B tests if credentials are unavailable or pre-flight check failed."""
     tier_b_marker = item.get_closest_marker("tier_b")
-    if tier_b_marker and not _credentials_available():
-        pytest.skip("Tier B tests require credentials")
+    if tier_b_marker:
+        # First check if credentials are available
+        if not _credentials_available():
+            pytest.skip("Tier B tests require credentials")
+
+        # Then check if pre-flight check failed
+        preflight_result = item.config.preflight_result
+        if preflight_result is not None and not preflight_result.success:
+            pytest.skip("Skipping Tier B: pre-flight check failed")
 
 
 @pytest.fixture(scope="session")
@@ -76,3 +85,41 @@ def google_credentials():
     credentials = manager.get_credentials_for_testing()
 
     yield credentials
+
+
+@pytest.fixture(scope="session", autouse=True)
+def preflight_check(request, google_credentials):
+    """Run pre-flight check before any tests to validate credentials.
+
+    This fixture automatically validates credentials once per test session using
+    a lightweight Drive API call. If pre-flight fails, Tier B tests will be skipped.
+
+    Args:
+        request: Pytest request object for accessing config
+        google_credentials: Loaded OAuth credentials from google_credentials fixture
+
+    Returns:
+        PreflightCheckResult | None: Result of pre-flight check, or None if no credentials
+    """
+    from extended_google_doc_utils.auth.preflight_check import PreflightCheck
+
+    # If no credentials available, skip pre-flight check
+    if google_credentials is None:
+        request.config.preflight_result = None
+        return None
+
+    # Run pre-flight check
+    checker = PreflightCheck(google_credentials)
+    result = checker.run()
+
+    # Store result in config for pytest hooks to access
+    request.config.preflight_result = result
+
+    # Display result
+    if result.success:
+        print(f"\n✓ Pre-flight check passed for {result.user_email} ({result.elapsed_time:.1f}s)")
+    else:
+        print(f"\n✗ Pre-flight check failed: {result.error_message}")
+        print("Tier B tests will be skipped")
+
+    return result

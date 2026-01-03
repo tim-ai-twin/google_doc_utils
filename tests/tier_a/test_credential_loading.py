@@ -8,6 +8,7 @@ import pytest
 from extended_google_doc_utils.auth.credential_manager import (
     CredentialManager,
     CredentialSource,
+    InvalidCredentialsError,
     OAuthCredentials,
 )
 
@@ -67,18 +68,22 @@ def test_load_credentials_success(temp_credentials_dir, sample_credentials_data)
 
 
 def test_load_credentials_malformed_json(temp_credentials_dir):
-    """Test that load_credentials returns None for malformed JSON."""
+    """Test that load_credentials raises InvalidCredentialsError for malformed JSON."""
     token_file = temp_credentials_dir / "token.json"
     with open(token_file, "w") as f:
         f.write("not valid json{")
 
     manager = CredentialManager(CredentialSource.LOCAL_FILE)
-    result = manager.load_credentials()
-    assert result is None
+    with pytest.raises(InvalidCredentialsError) as exc_info:
+        manager.load_credentials()
+
+    # Verify error message is helpful
+    assert "Failed to parse credentials file" in str(exc_info.value)
+    assert "bootstrap_oauth.py" in str(exc_info.value)
 
 
 def test_load_credentials_missing_fields(temp_credentials_dir):
-    """Test that load_credentials returns None when required fields are missing."""
+    """Test that load_credentials raises InvalidCredentialsError when required fields are missing."""
     # Write incomplete credentials (missing client_id)
     token_file = temp_credentials_dir / "token.json"
     incomplete_data = {
@@ -89,8 +94,12 @@ def test_load_credentials_missing_fields(temp_credentials_dir):
         json.dump(incomplete_data, f)
 
     manager = CredentialManager(CredentialSource.LOCAL_FILE)
-    result = manager.load_credentials()
-    assert result is None
+    with pytest.raises(InvalidCredentialsError) as exc_info:
+        manager.load_credentials()
+
+    # Verify error message is helpful
+    assert "missing required fields" in str(exc_info.value).lower()
+    assert "bootstrap_oauth.py" in str(exc_info.value)
 
 
 def test_load_credentials_none_source():
