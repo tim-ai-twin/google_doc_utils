@@ -1,0 +1,51 @@
+# Credentials (CRITICAL - never commit)
+.credentials/
+*.json
+!tests/fixtures/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# uv
+.uv/
+
+# Type checking
+.mypy_cache/
+.pytype/
+.pyre/
+.dmypy.json
+dmypy.json
