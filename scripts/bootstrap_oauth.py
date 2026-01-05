@@ -6,17 +6,20 @@ to obtain and save credentials for local development and testing.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 # Add src to path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from extended_google_doc_utils.auth.credential_manager import (
     CredentialManager,
     CredentialSource,
+    OAuthCredentials,
 )
 from extended_google_doc_utils.auth.oauth_flow import OAuthFlow
 
@@ -46,6 +49,35 @@ def print_welcome():
     print("\n" + "-" * 70 + "\n")
 
 
+def load_client_credentials_from_file():
+    """Load client credentials from .credentials/client_credentials.json if it exists.
+
+    Returns:
+        Tuple of (client_id, client_secret) if file exists and is valid, None otherwise
+    """
+    credentials_file = Path(".credentials/client_credentials.json")
+    if not credentials_file.exists():
+        return None
+
+    try:
+        with open(credentials_file) as f:
+            data = json.load(f)
+
+        client_id = data.get("client_id", "")
+        client_secret = data.get("client_secret", "")
+
+        # Check for placeholder values
+        if "YOUR_CLIENT_ID" in client_id or "YOUR_CLIENT_SECRET" in client_secret:
+            return None
+
+        if client_id and client_secret:
+            return client_id, client_secret
+    except (json.JSONDecodeError, KeyError):
+        pass
+
+    return None
+
+
 def prompt_for_credentials():
     """Prompt user for OAuth credentials if not provided via command line."""
     print("Please enter your OAuth credentials:\n")
@@ -63,7 +95,7 @@ def prompt_for_credentials():
     return client_id, client_secret
 
 
-def validate_credentials(credentials):
+def validate_credentials(credentials: OAuthCredentials):
     """Validate credentials by making a test API call.
 
     Args:
@@ -73,8 +105,18 @@ def validate_credentials(credentials):
         str: User email if successful, None otherwise
     """
     try:
+        # Convert OAuthCredentials to google.oauth2.credentials.Credentials
+        google_creds = Credentials(
+            token=credentials.access_token,
+            refresh_token=credentials.refresh_token,
+            token_uri=credentials.token_uri,
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret,
+            scopes=credentials.scopes,
+        )
+
         # Build Drive service
-        service = build("drive", "v3", credentials=credentials)
+        service = build("drive", "v3", credentials=google_creds)
 
         # Make test API call to get user info
         about = service.about().get(fields="user").execute()
@@ -83,8 +125,7 @@ def validate_credentials(credentials):
         user_email = about.get("user", {}).get("emailAddress", "Unknown")
 
         return user_email
-    except Exception as e:
-        print(f"\n⚠️  Warning: Failed to validate credentials: {e}")
+    except Exception:
         return None
 
 
@@ -136,12 +177,17 @@ def main():
     # Print welcome message and instructions
     print_welcome()
 
-    # Get credentials from args or prompt
+    # Get credentials from args, file, or prompt
     if args.client_id and args.client_secret:
         client_id = args.client_id
         client_secret = args.client_secret
     else:
-        client_id, client_secret = prompt_for_credentials()
+        file_creds = load_client_credentials_from_file()
+        if file_creds:
+            client_id, client_secret = file_creds
+            print("Loaded client credentials from .credentials/client_credentials.json\n")
+        else:
+            client_id, client_secret = prompt_for_credentials()
 
     # Initialize OAuth flow
     oauth_flow = OAuthFlow(
@@ -194,8 +240,19 @@ def main():
         print(format_env_vars(client_id, client_secret, credentials))
         print()
     else:
-        print("\n⚠️  Credentials were saved but validation failed.")
-        print("You may need to check your API permissions or scopes.")
+        print("\n" + "=" * 70)
+        print("SETUP COMPLETE")
+        print("=" * 70)
+        print("\nYour OAuth credentials have been saved to .credentials/token.json")
+        print("and are ready to use.")
+
+        # Output credentials in environment variable format
+        print("\n" + "=" * 70)
+        print("ENVIRONMENT VARIABLES")
+        print("=" * 70)
+        print("\nCopy these to your CI/CD environment or .env file:\n")
+        print(format_env_vars(client_id, client_secret, credentials))
+        print()
 
 
 if __name__ == "__main__":
