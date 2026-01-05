@@ -119,5 +119,8 @@ class PreflightCheck:
             print(f"✓ Credentials valid for {result.user_email} ({result.elapsed_time:.1f}s)")
         else:
             print(f"✗ Credential validation failed: {result.error_message}")
+            print()
+            print("To set up credentials, run:")
+            print("    python scripts/bootstrap_oauth.py")
 
         return result.success

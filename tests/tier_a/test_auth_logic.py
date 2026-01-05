@@ -162,3 +162,108 @@ def test_refresh_token_logic_with_naive_datetime(
     # Verify the expiry has UTC timezone
     assert refreshed.token_expiry is not None
     assert refreshed.token_expiry.tzinfo == UTC
+
+
+@pytest.mark.tier_a
+@patch.dict(
+    "os.environ",
+    {
+        "GOOGLE_OAUTH_CLIENT_ID": "test_client_id.apps.googleusercontent.com",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "test_client_secret",
+        "GOOGLE_OAUTH_REFRESH_TOKEN": "test_refresh_token",
+    },
+)
+def test_load_credentials_from_environment():
+    """Test loading credentials from environment variables.
+
+    This validates that credentials can be loaded from environment variables
+    when ENVIRONMENT source is specified, without requiring a local file.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+    result = manager.load_credentials()
+
+    # Verify credentials were loaded
+    assert result is not None
+    assert isinstance(result, OAuthCredentials)
+
+    # Verify required fields from environment variables
+    assert result.client_id == "test_client_id.apps.googleusercontent.com"
+    assert result.client_secret == "test_client_secret"
+    assert result.refresh_token == "test_refresh_token"
+
+    # Verify default values
+    assert result.access_token == ""  # Will be obtained via refresh
+    assert result.token_uri == "https://oauth2.googleapis.com/token"
+
+    # Verify default scopes
+    assert result.scopes == [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive.file",
+    ]
+
+    # Verify token_expiry is set to past date (forces refresh)
+    assert result.token_expiry is not None
+    assert result.token_expiry < datetime.now(UTC)
+
+
+@pytest.mark.tier_a
+@patch.dict(
+    "os.environ",
+    {
+        "GOOGLE_OAUTH_CLIENT_ID": "test_client_id.apps.googleusercontent.com",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "test_client_secret",
+        "GOOGLE_OAUTH_REFRESH_TOKEN": "test_refresh_token",
+        "GOOGLE_OAUTH_SCOPES": "https://www.googleapis.com/auth/documents,https://www.googleapis.com/auth/drive",
+    },
+)
+def test_load_credentials_from_environment_with_custom_scopes():
+    """Test loading credentials with custom scopes from environment.
+
+    This validates that the GOOGLE_OAUTH_SCOPES environment variable
+    is correctly parsed as a comma-separated list of scopes.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+    result = manager.load_credentials()
+
+    # Verify custom scopes were parsed correctly
+    assert result is not None
+    assert result.scopes == [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive",
+    ]
+
+
+@pytest.mark.tier_a
+@patch.dict("os.environ", {}, clear=True)
+def test_load_credentials_from_environment_missing_vars():
+    """Test that load_credentials returns None when env vars are missing.
+
+    This validates the behavior when required environment variables
+    are not set, which is expected for local development.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+    result = manager.load_credentials()
+
+    # Verify None is returned when environment variables are missing
+    assert result is None
+
+
+@pytest.mark.tier_a
+@patch.dict(
+    "os.environ",
+    {
+        "GOOGLE_OAUTH_CLIENT_ID": "test_client_id.apps.googleusercontent.com",
+        # Missing CLIENT_SECRET and REFRESH_TOKEN
+    },
+)
+def test_load_credentials_from_environment_partial_vars():
+    """Test that load_credentials returns None when some env vars are missing.
+
+    This validates that all required environment variables must be present,
+    and missing any one of them results in None being returned.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+    result = manager.load_credentials()
+
+    # Verify None is returned when some required vars are missing
+    assert result is None

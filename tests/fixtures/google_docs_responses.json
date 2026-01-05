@@ -18,6 +18,25 @@
       ]
     }
   },
+  "gondwana_document": {
+    "documentId": "1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4",
+    "title": "Gondwana Test Document",
+    "body": {
+      "content": [
+        {
+          "paragraph": {
+            "elements": [
+              {
+                "textRun": {
+                  "content": "Gondwana was a large landmass that formed part of the supercontinent Pangaea.\n"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
   "documents.batchUpdate": {
     "documentId": "1t8YEJ57mfNbvE85tQjFDmPmLAvRX1v307teKfXc09T4",
     "replies": [

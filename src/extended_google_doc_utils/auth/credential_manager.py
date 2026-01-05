@@ -203,7 +203,7 @@ class CredentialManager:
         if self._source == CredentialSource.LOCAL_FILE:
             return self._load_from_local_file()
         elif self._source == CredentialSource.ENVIRONMENT:
-            raise NotImplementedError("ENVIRONMENT source not yet implemented")
+            return self._load_from_environment()
         elif self._source == CredentialSource.NONE:
             return None
         else:
@@ -254,6 +254,55 @@ class CredentialManager:
                 message="Credentials file contains invalid values",
                 details=f"Value error: {e}",
             ) from e
+
+    def _load_from_environment(self) -> OAuthCredentials | None:
+        """Load credentials from environment variables.
+
+        Reads credentials from:
+        - GOOGLE_OAUTH_CLIENT_ID (required)
+        - GOOGLE_OAUTH_CLIENT_SECRET (required)
+        - GOOGLE_OAUTH_REFRESH_TOKEN (required)
+        - GOOGLE_OAUTH_SCOPES (optional, comma-separated)
+
+        Returns:
+            OAuthCredentials if all required variables present, None otherwise
+
+        Raises:
+            InvalidCredentialsError: If environment variables are malformed
+        """
+        # Read required environment variables
+        client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+        refresh_token = os.getenv("GOOGLE_OAUTH_REFRESH_TOKEN")
+
+        # Return None if any required variable is missing
+        if not client_id or not client_secret or not refresh_token:
+            return None
+
+        # Read optional scopes (comma-separated)
+        scopes_str = os.getenv("GOOGLE_OAUTH_SCOPES")
+        if scopes_str:
+            scopes = [s.strip() for s in scopes_str.split(",")]
+        else:
+            # Default scopes for Google Docs and Drive
+            scopes = [
+                "https://www.googleapis.com/auth/documents",
+                "https://www.googleapis.com/auth/drive.file",
+            ]
+
+        # Set token_expiry to past date to force immediate refresh
+        # This ensures we get a fresh access token on first use
+        token_expiry = datetime.fromtimestamp(0, tz=UTC)
+
+        return OAuthCredentials(
+            access_token="",  # Will be obtained via refresh
+            refresh_token=refresh_token,
+            token_expiry=token_expiry,
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=scopes,
+            token_uri="https://oauth2.googleapis.com/token",
+        )
 
     def _save_to_local_file(self, credentials: OAuthCredentials) -> None:
         """Save credentials to .credentials/token.json.
@@ -383,7 +432,7 @@ class CredentialManager:
             # Token has been revoked or is invalid
             raise TokenRevokedError() from e
 
-        except (OSError, IOError) as e:
+        except OSError as e:
             # Network or connection error
             raise CredentialError(
                 f"Network error while refreshing token: {e}\n"
