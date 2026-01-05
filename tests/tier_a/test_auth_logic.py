@@ -4,7 +4,6 @@ These tests focus on credential loading and refresh logic without
 requiring real files or API calls. All external dependencies are mocked.
 """
 
-import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, Mock, patch
 
@@ -14,6 +13,7 @@ from extended_google_doc_utils.auth.credential_manager import (
     CredentialManager,
     CredentialSource,
     InvalidCredentialsError,
+    MissingEnvironmentVariableError,
     OAuthCredentials,
 )
 
@@ -235,17 +235,24 @@ def test_load_credentials_from_environment_with_custom_scopes():
 
 @pytest.mark.tier_a
 @patch.dict("os.environ", {}, clear=True)
-def test_load_credentials_from_environment_missing_vars():
-    """Test that load_credentials returns None when env vars are missing.
+def test_load_credentials_from_environment_missing_all_vars():
+    """Test that load_credentials raises error when all env vars are missing.
 
-    This validates the behavior when required environment variables
-    are not set, which is expected for local development.
+    This validates clear error messages for CI/CD configuration issues
+    when required environment variables are not set.
     """
     manager = CredentialManager(CredentialSource.ENVIRONMENT)
-    result = manager.load_credentials()
 
-    # Verify None is returned when environment variables are missing
-    assert result is None
+    with pytest.raises(MissingEnvironmentVariableError) as exc_info:
+        manager.load_credentials()
+
+    # Verify all three missing variables are reported
+    assert "GOOGLE_OAUTH_CLIENT_ID" in str(exc_info.value)
+    assert "GOOGLE_OAUTH_CLIENT_SECRET" in str(exc_info.value)
+    assert "GOOGLE_OAUTH_REFRESH_TOKEN" in str(exc_info.value)
+
+    # Verify the exception tracks missing vars
+    assert len(exc_info.value.missing_vars) == 3
 
 
 @pytest.mark.tier_a
@@ -255,15 +262,127 @@ def test_load_credentials_from_environment_missing_vars():
         "GOOGLE_OAUTH_CLIENT_ID": "test_client_id.apps.googleusercontent.com",
         # Missing CLIENT_SECRET and REFRESH_TOKEN
     },
+    clear=True,
 )
 def test_load_credentials_from_environment_partial_vars():
-    """Test that load_credentials returns None when some env vars are missing.
+    """Test that load_credentials raises error when some env vars are missing.
 
     This validates that all required environment variables must be present,
-    and missing any one of them results in None being returned.
+    and missing any one of them results in a clear error message.
     """
     manager = CredentialManager(CredentialSource.ENVIRONMENT)
-    result = manager.load_credentials()
 
-    # Verify None is returned when some required vars are missing
-    assert result is None
+    with pytest.raises(MissingEnvironmentVariableError) as exc_info:
+        manager.load_credentials()
+
+    # Verify exactly the missing variables are reported
+    assert "GOOGLE_OAUTH_CLIENT_SECRET" in str(exc_info.value)
+    assert "GOOGLE_OAUTH_REFRESH_TOKEN" in str(exc_info.value)
+
+    # CLIENT_ID is present, so should not be in the error
+    assert exc_info.value.missing_vars == [
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+        "GOOGLE_OAUTH_REFRESH_TOKEN",
+    ]
+
+
+@pytest.mark.tier_a
+@patch.dict(
+    "os.environ",
+    {
+        "GOOGLE_OAUTH_CLIENT_ID": "test_client_id.apps.googleusercontent.com",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "test_client_secret",
+        "GOOGLE_OAUTH_REFRESH_TOKEN": "",  # Empty value
+    },
+    clear=True,
+)
+def test_load_credentials_from_environment_empty_value():
+    """Test that empty env var values are treated as missing.
+
+    This validates that whitespace-only or empty values are properly
+    detected and reported as missing with a clear error message.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+
+    with pytest.raises(MissingEnvironmentVariableError) as exc_info:
+        manager.load_credentials()
+
+    # Only the empty variable should be reported as missing
+    assert exc_info.value.missing_vars == ["GOOGLE_OAUTH_REFRESH_TOKEN"]
+    assert "Missing required env var GOOGLE_OAUTH_REFRESH_TOKEN" in str(exc_info.value)
+
+
+@pytest.mark.tier_a
+@patch.dict(
+    "os.environ",
+    {
+        "GOOGLE_OAUTH_CLIENT_ID": "   ",  # Whitespace only
+        "GOOGLE_OAUTH_CLIENT_SECRET": "test_client_secret",
+        "GOOGLE_OAUTH_REFRESH_TOKEN": "test_refresh_token",
+    },
+    clear=True,
+)
+def test_load_credentials_from_environment_whitespace_value():
+    """Test that whitespace-only env var values are treated as missing.
+
+    This validates that values containing only whitespace are properly
+    detected and reported as missing.
+    """
+    manager = CredentialManager(CredentialSource.ENVIRONMENT)
+
+    with pytest.raises(MissingEnvironmentVariableError) as exc_info:
+        manager.load_credentials()
+
+    assert exc_info.value.missing_vars == ["GOOGLE_OAUTH_CLIENT_ID"]
+
+
+@pytest.mark.tier_a
+def test_validate_environment_variables_all_present():
+    """Test validate_environment_variables with all required vars present."""
+    with patch.dict(
+        "os.environ",
+        {
+            "GOOGLE_OAUTH_CLIENT_ID": "test_client_id",
+            "GOOGLE_OAUTH_CLIENT_SECRET": "test_secret",
+            "GOOGLE_OAUTH_REFRESH_TOKEN": "test_token",
+        },
+        clear=True,
+    ):
+        missing = CredentialManager.validate_environment_variables()
+        assert missing == []
+
+
+@pytest.mark.tier_a
+def test_validate_environment_variables_all_missing():
+    """Test validate_environment_variables with all vars missing."""
+    with patch.dict("os.environ", {}, clear=True):
+        missing = CredentialManager.validate_environment_variables()
+        assert missing == [
+            "GOOGLE_OAUTH_CLIENT_ID",
+            "GOOGLE_OAUTH_CLIENT_SECRET",
+            "GOOGLE_OAUTH_REFRESH_TOKEN",
+        ]
+
+
+@pytest.mark.tier_a
+def test_missing_env_var_error_single_var():
+    """Test MissingEnvironmentVariableError message for single missing var."""
+    error = MissingEnvironmentVariableError(["GOOGLE_OAUTH_CLIENT_ID"])
+
+    # Single variable should not use "vars:" plural
+    assert "Missing required env var GOOGLE_OAUTH_CLIENT_ID" in str(error)
+    assert "vars:" not in str(error)
+
+
+@pytest.mark.tier_a
+def test_missing_env_var_error_multiple_vars():
+    """Test MissingEnvironmentVariableError message for multiple missing vars."""
+    error = MissingEnvironmentVariableError([
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+    ])
+
+    # Multiple variables should use "vars:" plural
+    assert "Missing required env vars:" in str(error)
+    assert "GOOGLE_OAUTH_CLIENT_ID" in str(error)
+    assert "GOOGLE_OAUTH_CLIENT_SECRET" in str(error)

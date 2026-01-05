@@ -70,6 +70,32 @@ class InvalidCredentialsError(CredentialError):
         super().__init__(full_message)
 
 
+class MissingEnvironmentVariableError(CredentialError):
+    """Raised when required environment variables are missing or empty."""
+
+    def __init__(self, missing_vars: list[str]):
+        """Initialize MissingEnvironmentVariableError with helpful message.
+
+        Args:
+            missing_vars: List of missing environment variable names
+        """
+        if len(missing_vars) == 1:
+            message = f"Missing required env var {missing_vars[0]}"
+        else:
+            var_list = ", ".join(missing_vars)
+            message = f"Missing required env vars: {var_list}"
+
+        message += (
+            "\n\nFor CI/CD environments, ensure these secrets are configured:\n"
+            "- GOOGLE_OAUTH_CLIENT_ID: OAuth 2.0 client ID\n"
+            "- GOOGLE_OAUTH_CLIENT_SECRET: OAuth 2.0 client secret\n"
+            "- GOOGLE_OAUTH_REFRESH_TOKEN: Long-lived refresh token\n"
+            "\nSee the documentation for setting up GitHub Actions secrets."
+        )
+        super().__init__(message)
+        self.missing_vars = missing_vars
+
+
 class CredentialSource(Enum):
     """Source from which credentials are loaded."""
 
@@ -255,6 +281,32 @@ class CredentialManager:
                 details=f"Value error: {e}",
             ) from e
 
+    @staticmethod
+    def validate_environment_variables() -> list[str]:
+        """Validate that all required environment variables are present and non-empty.
+
+        Checks for:
+        - GOOGLE_OAUTH_CLIENT_ID (required)
+        - GOOGLE_OAUTH_CLIENT_SECRET (required)
+        - GOOGLE_OAUTH_REFRESH_TOKEN (required)
+
+        Returns:
+            List of missing environment variable names (empty if all present)
+        """
+        required_vars = [
+            "GOOGLE_OAUTH_CLIENT_ID",
+            "GOOGLE_OAUTH_CLIENT_SECRET",
+            "GOOGLE_OAUTH_REFRESH_TOKEN",
+        ]
+
+        missing = []
+        for var_name in required_vars:
+            value = os.getenv(var_name)
+            if not value or not value.strip():
+                missing.append(var_name)
+
+        return missing
+
     def _load_from_environment(self) -> OAuthCredentials | None:
         """Load credentials from environment variables.
 
@@ -265,19 +317,20 @@ class CredentialManager:
         - GOOGLE_OAUTH_SCOPES (optional, comma-separated)
 
         Returns:
-            OAuthCredentials if all required variables present, None otherwise
+            OAuthCredentials if all required variables present
 
         Raises:
-            InvalidCredentialsError: If environment variables are malformed
+            MissingEnvironmentVariableError: If any required env var is missing or empty
         """
-        # Read required environment variables
+        # Validate all required environment variables
+        missing_vars = self.validate_environment_variables()
+        if missing_vars:
+            raise MissingEnvironmentVariableError(missing_vars)
+
+        # Read required environment variables (validated above)
         client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
         client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
         refresh_token = os.getenv("GOOGLE_OAUTH_REFRESH_TOKEN")
-
-        # Return None if any required variable is missing
-        if not client_id or not client_secret or not refresh_token:
-            return None
 
         # Read optional scopes (comma-separated)
         scopes_str = os.getenv("GOOGLE_OAUTH_SCOPES")
