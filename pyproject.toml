@@ -1,5 +1,5 @@
 [project]
-name = "extended-google-doc-utils"
+name = "google_doc_utils"
 version = "0.1.0"
 description = "Extended utilities for Google Docs API with OAuth 2.0 authentication"
 readme = "README.md"

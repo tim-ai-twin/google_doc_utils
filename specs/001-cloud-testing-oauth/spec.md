@@ -28,7 +28,7 @@ The project must support two distinct tiers of testing to enable development by 
 
 ### User Story 1 - Local Development Testing (Priority: P1)
 
-A developer working on the extended-google-doc-utils library needs to run unit and integration tests locally on their machine. They want to authenticate once using their Google account and have their credentials persist for subsequent test runs without repeated login prompts.
+A developer working on the google_doc_utils library needs to run unit and integration tests locally on their machine. They want to authenticate once using their Google account and have their credentials persist for subsequent test runs without repeated login prompts.
 
 **Why this priority**: Local testing is the foundation of development workflow. Without reliable local testing, developers cannot validate changes before committing code. This is the minimum viable product that enables basic development.
 

@@ -7,7 +7,7 @@
 
 ## Summary
 
-This feature establishes a comprehensive testing infrastructure for the extended-google-doc-utils Python library, enabling secure OAuth-based testing across local development, cloud agents, and GitHub Actions CI/CD. The implementation uses a two-tier testing strategy: Tier A tests run without credentials using fixtures and mocks for broad accessibility, while Tier B tests require valid OAuth credentials to validate real Google Docs/Drive API integration. The infrastructure supports desktop OAuth with local callback servers for developers, environment-based credentials for automated testing, and GitHub Environment-based approval gates to protect credentials from untrusted code.
+This feature establishes a comprehensive testing infrastructure for the google_doc_utils Python library, enabling secure OAuth-based testing across local development, cloud agents, and GitHub Actions CI/CD. The implementation uses a two-tier testing strategy: Tier A tests run without credentials using fixtures and mocks for broad accessibility, while Tier B tests require valid OAuth credentials to validate real Google Docs/Drive API integration. The infrastructure supports desktop OAuth with local callback servers for developers, environment-based credentials for automated testing, and GitHub Environment-based approval gates to protect credentials from untrusted code.
 
 ## Technical Context
 
@@ -83,7 +83,7 @@ specs/[###-feature]/
 ### Source Code (repository root)
 
 ```text
-extended-google-doc-utils/
+google_doc_utils/
 ├── pyproject.toml              # Project metadata, dependencies, uv configuration
 ├── .python-version             # Python version specification for uv
 ├── uv.lock                     # Dependency lock file (uv-managed)

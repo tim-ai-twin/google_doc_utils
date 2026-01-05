@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document consolidates research findings for implementing a two-tier testing infrastructure with OAuth authentication for the extended-google-doc-utils Python library. All technical clarifications from the plan's Technical Context have been resolved.
+This document consolidates research findings for implementing a two-tier testing infrastructure with OAuth authentication for the google_doc_utils Python library. All technical clarifications from the plan's Technical Context have been resolved.
 
 ---
 

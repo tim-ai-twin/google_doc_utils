@@ -6,7 +6,7 @@
 
 ## Overview
 
-This guide helps you get started with the extended-google-doc-utils testing infrastructure. Choose your path:
+This guide helps you get started with the google_doc_utils testing infrastructure. Choose your path:
 
 - **[Local Developer](#local-developer-setup)** - Set up OAuth and run tests on your machine
 - **[Cloud Agent](#cloud-agent-setup)** - Run Tier A tests without credentials
@@ -26,7 +26,7 @@ This guide helps you get started with the extended-google-doc-utils testing infr
 
 ```bash
 git clone <repository-url>
-cd extended-google-doc-utils
+cd google_doc_utils
 
 # Install dependencies
 uv sync

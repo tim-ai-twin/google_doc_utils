@@ -31,7 +31,7 @@ This project provides:
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd extended-google-doc-utils
+cd google_doc_utils
 ```
 
 2. Install dependencies using uv:

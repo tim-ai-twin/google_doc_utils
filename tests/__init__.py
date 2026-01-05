@@ -1,1 +1,1 @@
-"""Test suite for extended-google-doc-utils."""
+"""Test suite for google_doc_utils."""
