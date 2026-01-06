@@ -1,9 +1,11 @@
 """Logging configuration for extended_google_doc_utils."""
 
+from __future__ import annotations
+
 import logging
 import os
 import sys
-from typing import Optional
+from typing import TextIO
 
 
 # Package logger name
@@ -14,7 +16,7 @@ DEFAULT_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     """Get a logger for the package or a submodule.
 
     Args:
@@ -34,7 +36,7 @@ def setup_logging(
     level: int = logging.INFO,
     format_string: str = DEFAULT_FORMAT,
     date_format: str = DEFAULT_DATE_FORMAT,
-    stream: Optional[object] = None,
+    stream: TextIO | None = None,
 ) -> logging.Logger:
     """Configure logging for the package.
 

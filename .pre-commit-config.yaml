@@ -1,4 +1,43 @@
 repos:
+  # Credential and secret detection
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Prevent committing to .credentials/ directory
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      # Block any files in .credentials/
+      - id: forbid-submodules
+
+  # Block credential files and patterns
+  - repo: local
+    hooks:
+      # Block .credentials/ directory
+      - id: no-credentials-dir
+        name: Block .credentials/ files
+        entry: bash -c 'echo "ERROR: Cannot commit files in .credentials/ directory" && exit 1'
+        language: system
+        files: ^\.credentials/
+        pass_filenames: false
+
+      # Block credential patterns in non-test Python files
+      - id: no-hardcoded-secrets
+        name: Block hardcoded secrets
+        entry: bash -c 'if grep -l "client_secret.*=.*['\''\"]\(GOCSPX\|[a-zA-Z0-9_-]\{20,\}\)" "$@" 2>/dev/null | grep -v "^tests/" | grep -v "fixtures" | grep -qv "\.md$"; then echo "ERROR: Potential hardcoded secret found"; exit 1; fi'
+        language: system
+        types: [python]
+        exclude: ^(tests/|specs/)
+
+      # Block refresh token patterns
+      - id: no-refresh-tokens
+        name: Block refresh tokens
+        entry: bash -c 'if grep -lE "refresh_token.*=.*['\''\"](1//[a-zA-Z0-9_-]+|ya29\.[a-zA-Z0-9_-]+)" "$@" 2>/dev/null | grep -v "^tests/" | grep -qv "fixtures"; then echo "ERROR: Potential refresh token found"; exit 1; fi'
+        language: system
+        types: [python]
+        exclude: ^(tests/|specs/)
+
+  # Ruff formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.6
     hooks:

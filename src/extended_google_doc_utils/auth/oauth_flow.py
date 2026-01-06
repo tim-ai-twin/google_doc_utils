@@ -17,7 +17,7 @@ class _OAuthCallbackHandler(BaseHTTPRequestHandler):
     auth_code: str | None = None
     error: str | None = None
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         """Handle GET request from OAuth callback."""
         parsed_path = urlparse(self.path)
         params = parse_qs(parsed_path.query)
@@ -48,7 +48,7 @@ class _OAuthCallbackHandler(BaseHTTPRequestHandler):
                 b"<html><body><h1>Invalid request</h1></body></html>"
             )
 
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: object) -> None:
         """Suppress server log messages."""
         pass
 
@@ -67,7 +67,7 @@ class OAuthFlow:
     REDIRECT_URI_TEMPLATE = "http://localhost:{port}"
     PORT_RANGE = range(8080, 8090)  # 8080-8089
 
-    def __init__(self, client_id: str, client_secret: str, scopes: list[str]):
+    def __init__(self, client_id: str, client_secret: str, scopes: list[str]) -> None:
         """Initialize the OAuth flow.
 
         Args:
@@ -166,7 +166,7 @@ class OAuthFlow:
         return credentials
 
     def exchange_code_for_tokens(
-        self, auth_code: str, redirect_uri: str = None
+        self, auth_code: str, redirect_uri: str | None = None
     ) -> OAuthCredentials:
         """Exchange authorization code for access and refresh tokens.
 
