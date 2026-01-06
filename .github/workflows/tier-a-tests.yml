@@ -1,9 +1,9 @@
 name: Tier A Tests
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: ['**']
+  push:
     branches: [main]
 
 jobs:
@@ -13,14 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Set up Python
-        run: uv python install 3.11
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
         run: uv sync
 
       - name: Run Tier A tests
-        run: uv run pytest -m tier_a
+        run: uv run pytest -m tier_a -v
