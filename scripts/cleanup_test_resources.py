@@ -11,6 +11,9 @@ Usage:
     # Delete resources older than 24 hours
     uv run scripts/cleanup_test_resources.py --older-than 24
 
+    # Show orphaned resources (test resources left in Drive)
+    uv run scripts/cleanup_test_resources.py --show-orphaned
+
     # Delete all matching resources
     uv run scripts/cleanup_test_resources.py
 """
@@ -178,6 +181,52 @@ def format_resource(resource: dict) -> str:
     return f"  [{rtype}] {name} (created {created}){age_str}\n         ID: {resource_id}"
 
 
+def format_age_string(hours: float) -> str:
+    """Format age in hours to human-readable string.
+
+    Args:
+        hours: Age in hours
+
+    Returns:
+        Human-readable age string (e.g., "2 days ago", "3 hours ago")
+    """
+    if hours >= 48:
+        days = int(hours / 24)
+        return f"{days} days ago"
+    elif hours >= 24:
+        return "1 day ago"
+    elif hours >= 2:
+        return f"{int(hours)} hours ago"
+    elif hours >= 1:
+        return "1 hour ago"
+    else:
+        minutes = int(hours * 60)
+        return f"{minutes} minutes ago"
+
+
+def format_orphaned_list(resources: list[dict]) -> str:
+    """Format orphaned resources as a numbered list.
+
+    Args:
+        resources: List of resource metadata dicts with age_hours
+
+    Returns:
+        Formatted string with numbered list
+    """
+    if not resources:
+        return "No orphaned resources found."
+
+    lines = [f"Found {len(resources)} orphaned resource(s):"]
+
+    for i, resource in enumerate(resources, 1):
+        name = resource["name"]
+        age_hours = resource.get("age_hours", 0)
+        age_str = format_age_string(age_hours)
+        lines.append(f"{i}. {name} (created {age_str})")
+
+    return "\n".join(lines)
+
+
 def delete_resource(service, resource_id: str) -> bool:
     """Delete a resource from Google Drive.
 
@@ -209,6 +258,9 @@ Examples:
   uv run scripts/cleanup_test_resources.py --older-than 24
       Delete only resources older than 24 hours
 
+  uv run scripts/cleanup_test_resources.py --show-orphaned
+      List orphaned test resources without deleting
+
   uv run scripts/cleanup_test_resources.py
       Delete all matching test resources
 """,
@@ -217,6 +269,11 @@ Examples:
         "--dry-run",
         action="store_true",
         help="Show what would be deleted without actually deleting",
+    )
+    parser.add_argument(
+        "--show-orphaned",
+        action="store_true",
+        help="Display orphaned resources (test resources left in Drive) without deleting",
     )
     parser.add_argument(
         "--older-than",
@@ -270,9 +327,23 @@ Examples:
         unique_resources = filter_by_age(unique_resources, args.older_than)
         print(f"Filtered to resources older than {args.older_than} hours")
 
+    # Calculate age for all resources if not already done
+    if not args.older_than:
+        now = datetime.now(timezone.utc)
+        for resource in unique_resources:
+            if "age_hours" not in resource:
+                created_time = parse_timestamp(resource["createdTime"])
+                resource["age_hours"] = (now - created_time).total_seconds() / 3600
+
     # Display results
     if not unique_resources:
         print("\nNo test resources found matching the search criteria.")
+        sys.exit(0)
+
+    # Show orphaned mode - display numbered list and exit
+    if args.show_orphaned:
+        print()
+        print(format_orphaned_list(unique_resources))
         sys.exit(0)
 
     print(f"\nFound {len(unique_resources)} test resource(s):\n")

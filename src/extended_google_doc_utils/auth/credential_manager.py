@@ -14,6 +14,16 @@ from google.oauth2.credentials import Credentials
 from ..utils.config import EnvironmentType
 
 
+def is_cloud_agent() -> bool:
+    """Check if running in a cloud agent environment.
+
+    Returns:
+        True if CLOUD_AGENT environment variable is set to a truthy value
+        ('1', 'true', 'yes'), False otherwise.
+    """
+    return os.getenv("CLOUD_AGENT", "").lower() in ("1", "true", "yes")
+
+
 class CredentialError(Exception):
     """Base exception for credential-related errors."""
 
@@ -162,6 +172,15 @@ class CredentialSourceDetector:
         return EnvironmentType.detect()
 
     @staticmethod
+    def is_cloud_agent() -> bool:
+        """Check if running as a cloud agent.
+
+        Returns:
+            True if CLOUD_AGENT environment variable is set
+        """
+        return bool(os.getenv("CLOUD_AGENT"))
+
+    @staticmethod
     def get_credential_source(env_type: EnvironmentType) -> CredentialSource:
         """Determine credential source based on environment type.
 
@@ -171,9 +190,13 @@ class CredentialSourceDetector:
         Returns:
             Expected credential source for that environment
         """
+        # Cloud agents always use environment variables for credentials
+        if CredentialSourceDetector.is_cloud_agent():
+            return CredentialSource.ENVIRONMENT
+
         if env_type == EnvironmentType.LOCAL_DEVELOPMENT:
             return CredentialSource.LOCAL_FILE
-        elif env_type in (EnvironmentType.GITHUB_ACTIONS, EnvironmentType.CLOUD_AGENT):
+        elif env_type == EnvironmentType.GITHUB_ACTIONS:
             return CredentialSource.ENVIRONMENT
         else:
             return CredentialSource.NONE

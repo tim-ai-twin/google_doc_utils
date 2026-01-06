@@ -123,7 +123,6 @@ class TestResourceManager:
 
         Raises:
             RuntimeError: If credentials are not available
-            NotImplementedError: Drive folder creation not yet implemented
         """
         if self.credentials is None:
             raise RuntimeError(
@@ -131,8 +130,28 @@ class TestResourceManager:
                 "Initialize TestResourceManager with valid OAuth credentials."
             )
 
-        # TODO: Implement when Drive client is available
-        raise NotImplementedError("Drive folder creation not yet implemented")
+        from googleapiclient.discovery import build
+
+        folder_name = name or self.generate_unique_title("test-folder")
+        actual_test_name = test_name or "unknown"
+
+        # Create folder using Drive API
+        service = build("drive", "v3", credentials=self.credentials)
+        file_metadata = {
+            "name": folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+        folder = service.files().create(body=file_metadata, fields="id").execute()
+        folder_id = folder.get("id")
+
+        self.track_resource(
+            resource_id=folder_id,
+            resource_type=ResourceType.FOLDER,
+            title=folder_name,
+            test_name=actual_test_name,
+        )
+
+        return folder_id
 
     def track_resource(
         self,
@@ -183,8 +202,8 @@ class TestResourceManager:
             return False
 
         try:
-            if resource.resource_type == ResourceType.DOCUMENT:
-                # Use Drive API to delete (Docs API doesn't have delete)
+            if resource.resource_type in (ResourceType.DOCUMENT, ResourceType.FOLDER):
+                # Use Drive API to delete (works for both docs and folders)
                 from googleapiclient.discovery import build
 
                 service = build("drive", "v3", credentials=self.credentials)
