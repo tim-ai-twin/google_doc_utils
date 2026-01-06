@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      CLOUD_AGENT: "true"
 
     steps:
       - uses: actions/checkout@v4
