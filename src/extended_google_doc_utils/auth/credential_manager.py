@@ -543,7 +543,21 @@ class CredentialManager:
         if creds is None:
             return None
 
-        # Validate credentials before checking expiry
+        # Check if we can refresh - access_token might be empty from env loading
+        can_refresh = all([
+            creds.refresh_token,
+            creds.client_id,
+            creds.client_secret,
+            creds.token_uri,
+        ])
+
+        # If access_token is missing/empty but we can refresh, try to refresh first
+        if not creds.access_token and can_refresh:
+            creds = self.refresh_access_token(creds)
+            if self.source == CredentialSource.LOCAL_FILE:
+                self.save_credentials(creds)
+
+        # Validate credentials after potential refresh
         if not creds.is_valid():
             raise InvalidCredentialsError(
                 message="Loaded credentials are invalid",
