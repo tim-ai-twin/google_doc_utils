@@ -138,9 +138,26 @@ tests/
 
 This project is designed to be developer-friendly for both humans and AI coding agents:
 
-1. **Unit tests run without credentials**: Clone the repo and run `uv run pytest` immediately
+1. **Tier A tests run without credentials**: Clone the repo and run tests immediately
 2. **Clear layering**: Core logic is separated from Google API specifics
 3. **Comprehensive fixtures**: Real-world test cases without manual JSON wrangling
+
+#### Cloud Agent Mode
+
+Cloud agents should set `CLOUD_AGENT=true` and run only Tier A tests:
+
+```bash
+export CLOUD_AGENT=true
+uv run pytest -m tier_a
+```
+
+This runs all credential-free tests using mocks and fixtures. Tier B tests (which require Google API credentials) are automatically skipped.
+
+**Test Tiers:**
+- **Tier A** (`-m tier_a`): No credentials required, uses mocks/fixtures
+- **Tier B** (`-m tier_b`): Requires Google API credentials, makes real API calls
+
+See [tests/tier_b/README.md](tests/tier_b/README.md) for more details on the tiered testing strategy.
 
 ### Contributing
 

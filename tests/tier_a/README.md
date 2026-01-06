@@ -41,6 +41,71 @@ uv run pytest
 uv run pytest tests/tier_a/test_auth_logic.py
 ```
 
+## Cloud Agents
+
+This section is for cloud agents (AI coding assistants) contributing to the codebase.
+
+### Why Cloud Agents Run Tier A Tests
+
+Cloud agents operate without access to OAuth credentials or sensitive tokens. Tier A tests allow agents to:
+
+- **Validate code changes** without credential access
+- **Contribute safely** without exposing secrets to untrusted code
+- **Iterate quickly** with fast, reliable test feedback
+- **Participate fully** in the development workflow despite credential restrictions
+
+### Enabling Cloud Agent Mode
+
+No special configuration needed. Cloud agent mode is automatic:
+
+```bash
+# Install dependencies
+uv sync
+
+# Run Tier A tests
+uv run pytest -m tier_a
+```
+
+Tier B tests automatically skip when credentials are unavailable:
+```
+SKIPPED [1] - No credentials available (Tier A mode)
+```
+
+### What You Can Validate
+
+Tier A tests validate all code that doesn't require real Google API access:
+
+| Category | Examples |
+|----------|----------|
+| Business logic | Document parsing, text extraction, data transformation |
+| Configuration | Settings loading, environment detection, validation |
+| Error handling | Exception handling, edge cases, input validation |
+| Authentication logic | Credential loading, token validation (using mocks) |
+
+### What Requires Human Review
+
+Some changes require Tier B test validation by a human with credentials:
+
+- Changes to OAuth flow implementation
+- New Google API integrations
+- Modifications to credential handling
+- Updates affecting real API behavior
+
+When your PR modifies these areas, note it in your PR description so maintainers know to run Tier B validation.
+
+### Cloud Agent Workflow
+
+1. Make code changes
+2. Run `uv run pytest -m tier_a` to validate
+3. Update fixtures in `tests/fixtures/` if needed
+4. Submit PR with clear description of changes
+5. Maintainer runs Tier B tests after code review
+
+### Further Reading
+
+- **[Quickstart Guide](../../specs/001-cloud-testing-oauth/quickstart.md#cloud-agent-setup)** - Complete setup instructions
+- **[Tier B Tests](../tier_b/README.md)** - Understanding credential-required tests
+
 ## Writing Tier A Tests
 
 ### Test Structure
