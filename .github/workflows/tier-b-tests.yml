@@ -1,0 +1,15 @@
+name: Tier B Tests (Requires Approval)
+on: [pull_request, workflow_dispatch]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: tier-b-testing  # Requires manual approval
+    env:
+      GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.TIER_B_OAUTH_REFRESH_TOKEN }}
+      GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.TIER_B_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.TIER_B_OAUTH_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run pytest -m tier_b
