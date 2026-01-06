@@ -452,24 +452,23 @@ class CredentialManager:
             InvalidCredentialsError: If credentials missing required fields
             CredentialError: If network request fails or other errors occur
         """
-        # Validate credentials have required fields
-        if not credentials.is_valid():
-            missing_fields = []
-            if not credentials.access_token:
-                missing_fields.append("access_token")
-            if not credentials.refresh_token:
-                missing_fields.append("refresh_token")
-            if not credentials.client_id:
-                missing_fields.append("client_id")
-            if not credentials.client_secret:
-                missing_fields.append("client_secret")
-            if not credentials.scopes:
-                missing_fields.append("scopes")
-            if not credentials.token_uri:
-                missing_fields.append("token_uri")
+        # Validate credentials have fields required for refresh
+        # Note: access_token is NOT required - we're calling this to obtain one
+        missing_fields = []
+        if not credentials.refresh_token:
+            missing_fields.append("refresh_token")
+        if not credentials.client_id:
+            missing_fields.append("client_id")
+        if not credentials.client_secret:
+            missing_fields.append("client_secret")
+        if not credentials.scopes:
+            missing_fields.append("scopes")
+        if not credentials.token_uri:
+            missing_fields.append("token_uri")
 
+        if missing_fields:
             raise InvalidCredentialsError(
-                message="Credentials are missing required fields",
+                message="Credentials are missing required fields for refresh",
                 details=f"Missing: {', '.join(missing_fields)}",
             )
 
