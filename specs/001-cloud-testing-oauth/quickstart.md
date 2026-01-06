@@ -130,6 +130,39 @@ Cloud agents **cannot**:
 - Run Tier B tests (requires human-provided credentials)
 - Validate real Google API integration
 
+### Cloud Agent Mode
+
+Set the `CLOUD_AGENT` environment variable to explicitly enable cloud agent mode:
+
+```bash
+export CLOUD_AGENT=true
+uv run pytest
+```
+
+**What happens**:
+- Environment is detected as `CLOUD_AGENT` type
+- Tier B tests are automatically skipped (no credential errors)
+- Credential loading defaults to environment variables
+
+**Accepted values**: `1`, `true`, `yes` (case-insensitive)
+
+**Use cases**:
+- Running tests in remote/containerized environments
+- CI/CD pipelines where only Tier A tests should run
+- Development environments without Google OAuth setup
+
+**Credential configuration for CI/CD**:
+
+If you need Tier B tests in CI/CD, configure these environment variables:
+
+```bash
+export GOOGLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export GOOGLE_OAUTH_CLIENT_SECRET="GOCSPX-your-secret"
+export GOOGLE_OAUTH_REFRESH_TOKEN="1//your-refresh-token"
+```
+
+Without these variables set, Tier B tests will skip gracefully.
+
 ---
 
 ## CI/CD Setup

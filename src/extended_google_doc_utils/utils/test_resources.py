@@ -269,3 +269,31 @@ def isolated_document(
         yield doc_id
     finally:
         resource_manager.cleanup_resource(doc_id)
+
+
+@contextmanager
+def isolated_folder(
+    resource_manager: TestResourceManager,
+    name: str | None = None,
+    test_name: str | None = None,
+) -> Generator[str, None, None]:
+    """Context manager for creating a folder with automatic cleanup.
+
+    Args:
+        resource_manager: TestResourceManager instance
+        name: Optional folder name
+        test_name: Optional test name for tracking
+
+    Yields:
+        Folder ID
+
+    Example:
+        with isolated_folder(manager, test_name="test_foo") as folder_id:
+            # Use folder_id...
+        # Folder is automatically cleaned up
+    """
+    folder_id = resource_manager.create_folder(name, test_name)
+    try:
+        yield folder_id
+    finally:
+        resource_manager.cleanup_resource(folder_id)

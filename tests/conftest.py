@@ -42,11 +42,26 @@ def _credentials_available() -> bool:
     return any(os.getenv(var) for var in env_vars)
 
 
+def _is_cloud_agent_mode() -> bool:
+    """Check if running in cloud agent mode.
+
+    Returns:
+        bool: True if CLOUD_AGENT environment variable is set to 'true'
+    """
+    return os.getenv("CLOUD_AGENT", "").lower() == "true"
+
+
 def pytest_runtest_setup(item):
     """Auto-skip Tier B tests if credentials are unavailable or pre-flight check failed."""
     tier_b_marker = item.get_closest_marker("tier_b")
     if tier_b_marker:
-        # First check if credentials are available
+        # Check for cloud agent mode first (most specific message)
+        if _is_cloud_agent_mode():
+            pytest.skip(
+                "Skipping Tier B: Cloud agent mode detected (credentials not available)"
+            )
+
+        # Then check if credentials are available
         if not _credentials_available():
             pytest.skip("Tier B tests require credentials")
 

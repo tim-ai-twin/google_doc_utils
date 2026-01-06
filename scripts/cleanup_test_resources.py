@@ -362,7 +362,7 @@ Examples:
     print("-" * 60)
     response = input(f"Delete {len(unique_resources)} resource(s)? [y/N]: ").strip().lower()
 
-    if response != "y":
+    if response not in ("y", "yes"):
         print("Aborted.")
         sys.exit(0)
 
