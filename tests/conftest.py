@@ -96,12 +96,13 @@ def google_credentials():
         yield None
         return
 
-    try:
-        from extended_google_doc_utils.auth.credential_manager import (
-            CredentialManager,
-            CredentialSourceDetector,
-        )
+    from extended_google_doc_utils.auth.credential_manager import (
+        CredentialManager,
+        CredentialSourceDetector,
+        MissingEnvironmentVariableError,
+    )
 
+    try:
         # Auto-detect environment and credential source
         env_type = CredentialSourceDetector.detect_environment()
         credential_source = CredentialSourceDetector.get_credential_source(env_type)
@@ -111,8 +112,8 @@ def google_credentials():
         credentials = manager.get_credentials_for_testing()
 
         yield credentials
-    except Exception:
-        # If credential loading fails for any reason, return None
+    except MissingEnvironmentVariableError:
+        # Expected when env vars not configured - return None
         yield None
 
 
