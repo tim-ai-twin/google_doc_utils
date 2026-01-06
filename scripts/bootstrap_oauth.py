@@ -50,47 +50,106 @@ def print_welcome():
 
 
 def load_client_credentials_from_file():
-    """Load client credentials from .credentials/client_credentials.json if it exists.
+    """Load client credentials from existing credential files.
+
+    Checks in order:
+    1. .credentials/token.json (full saved credentials)
+    2. .credentials/client_credentials.json (client ID/secret only)
 
     Returns:
-        Tuple of (client_id, client_secret) if file exists and is valid, None otherwise
+        Tuple of (client_id, client_secret) if found and valid, None otherwise
     """
+    # First try token.json (has full credentials including client_id/secret)
+    token_file = Path(".credentials/token.json")
+    if token_file.exists():
+        try:
+            with open(token_file) as f:
+                data = json.load(f)
+
+            client_id = data.get("client_id", "")
+            client_secret = data.get("client_secret", "")
+
+            if client_id and client_secret:
+                return client_id, client_secret
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Fall back to client_credentials.json
     credentials_file = Path(".credentials/client_credentials.json")
-    if not credentials_file.exists():
-        return None
+    if credentials_file.exists():
+        try:
+            with open(credentials_file) as f:
+                data = json.load(f)
 
-    try:
-        with open(credentials_file) as f:
-            data = json.load(f)
+            client_id = data.get("client_id", "")
+            client_secret = data.get("client_secret", "")
 
-        client_id = data.get("client_id", "")
-        client_secret = data.get("client_secret", "")
+            # Check for placeholder values
+            if "YOUR_CLIENT_ID" in client_id or "YOUR_CLIENT_SECRET" in client_secret:
+                return None
 
-        # Check for placeholder values
-        if "YOUR_CLIENT_ID" in client_id or "YOUR_CLIENT_SECRET" in client_secret:
-            return None
-
-        if client_id and client_secret:
-            return client_id, client_secret
-    except (json.JSONDecodeError, KeyError):
-        pass
+            if client_id and client_secret:
+                return client_id, client_secret
+        except (json.JSONDecodeError, KeyError):
+            pass
 
     return None
 
 
-def prompt_for_credentials():
-    """Prompt user for OAuth credentials if not provided via command line."""
+def mask_secret(value: str, show_chars: int = 8) -> str:
+    """Mask a secret value, showing only first few characters.
+
+    Args:
+        value: The secret to mask
+        show_chars: Number of characters to show at start
+
+    Returns:
+        Masked string like "abc12345..."
+    """
+    if len(value) <= show_chars:
+        return value
+    return value[:show_chars] + "..."
+
+
+def prompt_for_credentials(defaults: tuple[str, str] | None = None):
+    """Prompt user for OAuth credentials with optional defaults.
+
+    Args:
+        defaults: Optional tuple of (client_id, client_secret) to use as defaults.
+                  If provided, user can press Enter to accept each default.
+
+    Returns:
+        Tuple of (client_id, client_secret)
+    """
     print("Please enter your OAuth credentials:\n")
 
-    client_id = input("Client ID: ").strip()
-    if not client_id:
-        print("Error: Client ID cannot be empty")
-        sys.exit(1)
+    default_id, default_secret = defaults if defaults else (None, None)
 
-    client_secret = input("Client Secret: ").strip()
-    if not client_secret:
-        print("Error: Client Secret cannot be empty")
-        sys.exit(1)
+    # Prompt for Client ID
+    if default_id:
+        prompt = f"Client ID [{mask_secret(default_id)}]: "
+        client_id = input(prompt).strip()
+        if not client_id:
+            client_id = default_id
+            print(f"  Using existing client ID")
+    else:
+        client_id = input("Client ID: ").strip()
+        if not client_id:
+            print("Error: Client ID cannot be empty")
+            sys.exit(1)
+
+    # Prompt for Client Secret
+    if default_secret:
+        prompt = f"Client Secret [{mask_secret(default_secret)}]: "
+        client_secret = input(prompt).strip()
+        if not client_secret:
+            client_secret = default_secret
+            print(f"  Using existing client secret")
+    else:
+        client_secret = input("Client Secret: ").strip()
+        if not client_secret:
+            print("Error: Client Secret cannot be empty")
+            sys.exit(1)
 
     return client_id, client_secret
 
@@ -182,12 +241,12 @@ def main():
         client_id = args.client_id
         client_secret = args.client_secret
     else:
+        # Try to load existing credentials as defaults
         file_creds = load_client_credentials_from_file()
         if file_creds:
-            client_id, client_secret = file_creds
-            print("Loaded client credentials from .credentials/client_credentials.json\n")
-        else:
-            client_id, client_secret = prompt_for_credentials()
+            print("Found existing credentials (press Enter to reuse, or type new values)\n")
+        # Prompt with defaults if available
+        client_id, client_secret = prompt_for_credentials(defaults=file_creds)
 
     # Initialize OAuth flow
     oauth_flow = OAuthFlow(
