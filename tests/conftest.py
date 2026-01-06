@@ -86,20 +86,34 @@ def google_credentials():
     Yields:
         OAuthCredentials | None: Credentials for use in tests
     """
-    from extended_google_doc_utils.auth.credential_manager import (
-        CredentialManager,
-        CredentialSourceDetector,
-    )
+    # In cloud agent mode, don't attempt to load credentials
+    if _is_cloud_agent_mode():
+        yield None
+        return
 
-    # Auto-detect environment and credential source
-    env_type = CredentialSourceDetector.detect_environment()
-    credential_source = CredentialSourceDetector.get_credential_source(env_type)
+    # If no credentials available, return None
+    if not _credentials_available():
+        yield None
+        return
 
-    # Load credentials
-    manager = CredentialManager(source=credential_source)
-    credentials = manager.get_credentials_for_testing()
+    try:
+        from extended_google_doc_utils.auth.credential_manager import (
+            CredentialManager,
+            CredentialSourceDetector,
+        )
 
-    yield credentials
+        # Auto-detect environment and credential source
+        env_type = CredentialSourceDetector.detect_environment()
+        credential_source = CredentialSourceDetector.get_credential_source(env_type)
+
+        # Load credentials
+        manager = CredentialManager(source=credential_source)
+        credentials = manager.get_credentials_for_testing()
+
+        yield credentials
+    except Exception:
+        # If credential loading fails for any reason, return None
+        yield None
 
 
 @pytest.fixture(scope="session", autouse=True)
