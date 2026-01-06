@@ -123,3 +123,33 @@ def preflight_check(request, google_credentials):
         print("Tier B tests will be skipped")
 
     return result
+
+
+@pytest.fixture(scope="session")
+def resource_manager(google_credentials):
+    """Provide a TestResourceManager for Tier B tests.
+
+    Session-scoped fixture that creates a TestResourceManager instance
+    and automatically cleans up all tracked resources at session end.
+
+    Args:
+        google_credentials: OAuth credentials from google_credentials fixture
+
+    Yields:
+        TestResourceManager: Manager for creating and tracking test resources
+    """
+    from extended_google_doc_utils.utils.test_resources import TestResourceManager
+
+    manager = TestResourceManager(credentials=google_credentials)
+
+    yield manager
+
+    # Cleanup all tracked resources at session end
+    succeeded, failed = manager.cleanup_all()
+    if succeeded > 0 or failed > 0:
+        print(f"\n🧹 Resource cleanup: {succeeded} succeeded, {failed} failed")
+        orphaned = manager.list_orphaned_resources()
+        if orphaned:
+            print("⚠️  Orphaned resources (manual cleanup needed):")
+            for r in orphaned:
+                print(f"   - {r.resource_type.value}: {r.resource_id} ({r.title})")

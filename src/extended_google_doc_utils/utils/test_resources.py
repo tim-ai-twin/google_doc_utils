@@ -1,19 +1,21 @@
-"""Utilities for tracking test resources created during integration tests."""
+"""Test resource management for Tier B integration tests.
 
-from __future__ import annotations
+Provides utilities for creating and tracking Google Docs/Drive resources
+with automatic cleanup to prevent orphaned test data.
+"""
 
-from dataclasses import dataclass
-from datetime import datetime
+import secrets
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from extended_google_doc_utils.google_api.docs_client import GoogleDocsClient
-    from extended_google_doc_utils.google_api.drive_client import GoogleDriveClient
+    from google.oauth2.credentials import Credentials
 
 
 class ResourceType(Enum):
-    """Type of Google resource created during testing."""
+    """Type of Google resource."""
 
     DOCUMENT = "document"
     FOLDER = "folder"
@@ -22,104 +24,193 @@ class ResourceType(Enum):
 
 @dataclass
 class TestResourceMetadata:
-    """Metadata for a test resource that needs cleanup.
-
-    Attributes:
-        resource_id: The Google API resource ID (e.g., document ID, folder ID)
-        resource_type: Type of the resource (document, folder, etc.)
-        title: Human-readable name of the resource
-        created_at: Timestamp when the resource was created
-    """
+    """Metadata about a test resource."""
 
     resource_id: str
     resource_type: ResourceType
     title: str
     created_at: datetime
+    test_name: str
+    cleanup_attempted: bool = False
+    cleanup_succeeded: bool = False
+
+    def is_orphaned(self) -> bool:
+        """Check if resource cleanup failed."""
+        return self.cleanup_attempted and not self.cleanup_succeeded
 
 
+@dataclass
 class TestResourceManager:
-    """Manages test resources for integration tests.
+    """Manages test resource lifecycle with tracking and cleanup.
 
-    Tracks created documents and folders for automatic cleanup,
-    preventing orphaned resources in Google Drive.
+    Handles:
+    - Creating resources with unique identifiers
+    - Tracking created resources
+    - Cleanup on test completion
+    - Identification of orphaned resources
     """
 
-    def __init__(
-        self,
-        docs_client: GoogleDocsClient,
-        drive_client: GoogleDriveClient,
-    ) -> None:
-        """Initialize TestResourceManager with API clients.
+    credentials: "Credentials | None" = None
+    _resources: list[TestResourceMetadata] = field(default_factory=list)
+
+    def generate_unique_title(self, prefix: str) -> str:
+        """Generate unique resource title with timestamp and random suffix.
+
+        Format: {prefix}-{timestamp}-{random}
+        Example: test-doc-20260102153045-a3f2
 
         Args:
-            docs_client: Google Docs API client for document operations
-            drive_client: Google Drive API client for file operations
-        """
-        self.docs_client = docs_client
-        self.drive_client = drive_client
-        self._tracked_resources: list[str] = []
-
-    def generate_unique_title(self, prefix: str = "test") -> str:
-        """Generate a unique title for test resources.
-
-        Args:
-            prefix: Prefix for the generated title
+            prefix: Title prefix (e.g., "test-doc")
 
         Returns:
             Unique title string
         """
-        raise NotImplementedError
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        random_suffix = secrets.token_hex(2)
+        return f"{prefix}-{timestamp}-{random_suffix}"
 
-    def create_document(self, title: str | None = None) -> str:
-        """Create a test document and track it for cleanup.
-
-        Args:
-            title: Optional title for the document. If not provided,
-                   a unique title will be generated.
-
-        Returns:
-            Document ID of the created document
-        """
-        raise NotImplementedError
-
-    def create_folder(self, name: str | None = None) -> str:
-        """Create a test folder and track it for cleanup.
+    def create_document(
+        self, title: str | None = None, test_name: str | None = None
+    ) -> str:
+        """Create a Google Doc with unique identifier and track for cleanup.
 
         Args:
-            name: Optional name for the folder. If not provided,
-                  a unique name will be generated.
+            title: Custom title (auto-generated if None)
+            test_name: Name of test creating resource (defaults to "unknown")
 
         Returns:
-            Folder ID of the created folder
+            Document ID
+
+        Raises:
+            RuntimeError: If credentials are not available
         """
-        raise NotImplementedError
+        if self.credentials is None:
+            raise RuntimeError("Credentials required to create documents")
+
+        from extended_google_doc_utils.google_api.docs_client import GoogleDocsClient
+
+        doc_title = title or self.generate_unique_title("test-doc")
+        actual_test_name = test_name or "unknown"
+
+        client = GoogleDocsClient(self.credentials)
+        doc_id = client.create_document(doc_title)
+
+        self.track_resource(
+            resource_id=doc_id,
+            resource_type=ResourceType.DOCUMENT,
+            title=doc_title,
+            test_name=actual_test_name,
+        )
+
+        return doc_id
+
+    def create_folder(
+        self, name: str | None = None, test_name: str | None = None
+    ) -> str:
+        """Create a Google Drive folder with unique identifier and track for cleanup.
+
+        Args:
+            name: Custom folder name (auto-generated if None)
+            test_name: Name of test creating resource (defaults to "unknown")
+
+        Returns:
+            Folder ID
+
+        Raises:
+            RuntimeError: If credentials are not available
+            NotImplementedError: Drive folder creation not yet implemented
+        """
+        if self.credentials is None:
+            raise RuntimeError("Credentials required to create folders")
+
+        # TODO: Implement when Drive client is available
+        raise NotImplementedError("Drive folder creation not yet implemented")
+
+    def track_resource(
+        self,
+        resource_id: str,
+        resource_type: ResourceType,
+        title: str,
+        test_name: str,
+    ) -> None:
+        """Manually track a resource for cleanup.
+
+        Args:
+            resource_id: Google resource ID
+            resource_type: Type of resource
+            title: Resource title
+            test_name: Name of test that created it
+        """
+        metadata = TestResourceMetadata(
+            resource_id=resource_id,
+            resource_type=resource_type,
+            title=title,
+            created_at=datetime.now(timezone.utc),
+            test_name=test_name,
+        )
+        self._resources.append(metadata)
 
     def cleanup_resource(self, resource_id: str) -> bool:
-        """Delete a single resource with best-effort cleanup.
+        """Delete a tracked resource (best effort).
 
         Args:
-            resource_id: ID of the resource to delete
+            resource_id: Google resource ID to delete
 
         Returns:
             True if deletion succeeded, False otherwise
         """
-        raise NotImplementedError
+        # Find the resource metadata
+        resource = None
+        for r in self._resources:
+            if r.resource_id == resource_id:
+                resource = r
+                break
 
-    def cleanup_all(self) -> dict[str, bool]:
-        """Clean up all tracked resources.
+        if resource is None:
+            return False
+
+        resource.cleanup_attempted = True
+
+        if self.credentials is None:
+            return False
+
+        try:
+            if resource.resource_type == ResourceType.DOCUMENT:
+                # Use Drive API to delete (Docs API doesn't have delete)
+                from googleapiclient.discovery import build
+
+                service = build("drive", "v3", credentials=self.credentials)
+                service.files().delete(fileId=resource_id).execute()
+                resource.cleanup_succeeded = True
+                return True
+            else:
+                # Other resource types not yet implemented
+                return False
+        except Exception:
+            return False
+
+    def cleanup_all(self) -> tuple[int, int]:
+        """Attempt to clean up all tracked resources.
 
         Returns:
-            Dictionary mapping resource IDs to deletion success status
+            Tuple of (successful_deletions, failed_deletions)
         """
-        raise NotImplementedError
+        succeeded = 0
+        failed = 0
 
-    def list_orphaned_resources(self, prefix: str = "test") -> list[dict]:
-        """List resources that appear to be orphaned test resources.
+        for resource in self._resources:
+            if not resource.cleanup_attempted:
+                if self.cleanup_resource(resource.resource_id):
+                    succeeded += 1
+                else:
+                    failed += 1
 
-        Args:
-            prefix: Prefix used to identify test resources
+        return succeeded, failed
 
-        Returns:
-            List of resource metadata dictionaries
-        """
-        raise NotImplementedError
+    def list_tracked_resources(self) -> list[TestResourceMetadata]:
+        """Get list of all tracked resources."""
+        return list(self._resources)
+
+    def list_orphaned_resources(self) -> list[TestResourceMetadata]:
+        """Get list of resources where cleanup failed."""
+        return [r for r in self._resources if r.is_orphaned()]

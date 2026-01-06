@@ -2,5 +2,10 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.6
     hooks:
+      # Run the formatter
       - id: ruff-format
-        name: ruff format
+        types_or: [python, pyi]
+      # Run the linter
+      - id: ruff
+        types_or: [python, pyi]
+        args: [--fix]
