@@ -1,6 +1,7 @@
 # Extended Google Doc Utils
 
 [![Tier A Tests](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-a-tests.yml/badge.svg)](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-a-tests.yml)
+[![Tier B Tests](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-b-tests.yml/badge.svg)](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-b-tests.yml)
 
 A Python-based MCP (Model Context Protocol) server that provides high-level utilities for reading, writing, and managing Google Docs with advanced formatting support.
 

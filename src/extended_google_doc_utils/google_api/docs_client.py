@@ -95,7 +95,10 @@ class GoogleDocsClient:
         # Split on whitespace and get first non-empty word
         words = text.split()
         if not words:
-            raise ValueError("Document contains no text")
+            raise ValueError(
+                "Document contains no extractable text. "
+                "The document may be empty or contain only non-text elements."
+            )
 
         return words[0]
 

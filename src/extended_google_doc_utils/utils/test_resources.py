@@ -5,6 +5,8 @@ with automatic cleanup to prevent orphaned test data.
 """
 
 import secrets
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -85,7 +87,10 @@ class TestResourceManager:
             RuntimeError: If credentials are not available
         """
         if self.credentials is None:
-            raise RuntimeError("Credentials required to create documents")
+            raise RuntimeError(
+                "Credentials required to create documents. "
+                "Initialize TestResourceManager with valid OAuth credentials."
+            )
 
         from extended_google_doc_utils.google_api.docs_client import GoogleDocsClient
 
@@ -121,7 +126,10 @@ class TestResourceManager:
             NotImplementedError: Drive folder creation not yet implemented
         """
         if self.credentials is None:
-            raise RuntimeError("Credentials required to create folders")
+            raise RuntimeError(
+                "Credentials required to create folders. "
+                "Initialize TestResourceManager with valid OAuth credentials."
+            )
 
         # TODO: Implement when Drive client is available
         raise NotImplementedError("Drive folder creation not yet implemented")
@@ -214,3 +222,31 @@ class TestResourceManager:
     def list_orphaned_resources(self) -> list[TestResourceMetadata]:
         """Get list of resources where cleanup failed."""
         return [r for r in self._resources if r.is_orphaned()]
+
+
+@contextmanager
+def isolated_document(
+    resource_manager: TestResourceManager,
+    title: str | None = None,
+    test_name: str | None = None,
+) -> Generator[str, None, None]:
+    """Context manager for creating a document with automatic cleanup.
+
+    Args:
+        resource_manager: TestResourceManager instance
+        title: Optional document title
+        test_name: Optional test name for tracking
+
+    Yields:
+        Document ID
+
+    Example:
+        with isolated_document(manager, test_name="test_foo") as doc_id:
+            # Use doc_id...
+        # Document is automatically cleaned up
+    """
+    doc_id = resource_manager.create_document(title, test_name)
+    try:
+        yield doc_id
+    finally:
+        resource_manager.cleanup_resource(doc_id)

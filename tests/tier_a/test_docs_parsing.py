@@ -99,7 +99,7 @@ def test_empty_document_handling(mock_build, mock_oauth_credentials):
 
     # Create client and verify ValueError is raised
     client = GoogleDocsClient(mock_oauth_credentials)
-    with pytest.raises(ValueError, match="Document contains no text"):
+    with pytest.raises(ValueError, match="Document contains no extractable text"):
         client.extract_first_word(empty_doc)
 
 

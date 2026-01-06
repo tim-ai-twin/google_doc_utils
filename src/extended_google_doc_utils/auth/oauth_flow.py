@@ -98,7 +98,8 @@ class OAuthFlow:
                 continue
 
         raise RuntimeError(
-            f"All ports in range {self.PORT_RANGE.start}-{self.PORT_RANGE.stop-1} are in use"
+            f"All ports in range {self.PORT_RANGE.start}-{self.PORT_RANGE.stop-1} are in use.\n"
+            "Please close other applications using these ports and try again."
         )
 
     def run_interactive_flow(self) -> OAuthCredentials:
@@ -151,7 +152,10 @@ class OAuthFlow:
             raise RuntimeError(f"OAuth authorization failed: {_OAuthCallbackHandler.error}")
 
         if not _OAuthCallbackHandler.auth_code:
-            raise TimeoutError("OAuth authorization timed out - no response received")
+            raise TimeoutError(
+                "OAuth authorization timed out - no response received within 5 minutes.\n"
+                "Please restart the authorization flow and complete it in your browser."
+            )
 
         # 5. Exchange code for tokens
         credentials = self.exchange_code_for_tokens(
@@ -179,7 +183,10 @@ class OAuthFlow:
             ValueError: If auth_code is invalid or empty
         """
         if not auth_code or not auth_code.strip():
-            raise ValueError("auth_code cannot be empty")
+            raise ValueError(
+                "Authorization code cannot be empty. "
+                "Ensure the OAuth callback received a valid code from Google."
+            )
 
         # If redirect_uri not provided, use default (first port in range)
         if redirect_uri is None:
@@ -200,7 +207,8 @@ class OAuthFlow:
         if not response.ok:
             error_details = response.text
             raise RuntimeError(
-                f"Token exchange failed: {response.status_code} - {error_details}"
+                f"Token exchange failed (HTTP {response.status_code}): {error_details}\n"
+                "This may indicate invalid client credentials or an expired authorization code."
             )
 
         token_response = response.json()

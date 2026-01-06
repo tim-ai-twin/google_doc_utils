@@ -15,6 +15,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff>=0.1.0",
+    "pytest-cov>=4.1.0",
 ]
 
 [build-system]
@@ -37,6 +38,18 @@ markers = [
     "tier_a: Tier A tests - require Google Cloud credentials",
     "tier_b: Tier B tests - use mocks, no credentials required",
 ]
+
+[tool.coverage.run]
+source = ["src/extended_google_doc_utils"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
 
 [tool.ruff]
 line-length = 100
