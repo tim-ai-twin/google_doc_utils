@@ -103,7 +103,7 @@
 - [ ] T042 [US1] Add credential validation test API call in bootstrap_oauth.py
 - [ ] T043 [US1] Output credentials in environment variable format in bootstrap_oauth.py
 - [ ] T044 [P] [US1] Write Tier A test for credential loading logic in tests/tier_a/test_auth_logic.py
-- [ ] T045 [P] [US1] Write Tier B test for OAuth flow in tests/tier_b/test_oauth_flow.py
+- [x] T045 [P] [US1] OAuth flow tested via bootstrap_oauth.py (dedicated test removed as redundant)
 - [ ] T046 [US1] Create pytest fixture for loading credentials in tests/conftest.py
 - [ ] T047 [US1] Add error handling for expired/revoked tokens with clear messages
 

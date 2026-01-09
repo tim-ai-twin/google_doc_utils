@@ -14,9 +14,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "tier_b: Tier B tests - require Google Cloud credentials"
     )
-    config.addinivalue_line(
-        "markers", "manual: Manual/interactive tests requiring human interaction"
-    )
     # Initialize pre-flight result storage
     config.preflight_result = None
 

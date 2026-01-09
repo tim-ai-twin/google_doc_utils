@@ -295,7 +295,7 @@ This script:
 uv run pytest tests/tier_a/test_auth_logic.py
 
 # Tier B test file
-uv run pytest tests/tier_b/test_oauth_flow.py
+uv run pytest tests/tier_b/test_preflight_check.py
 ```
 
 ### Run Tests with Coverage

@@ -119,11 +119,11 @@ This document describes the architecture of the Extended Google Doc Utils librar
 │   │   (Credential-Free)           │   │   (Credential-Required)       │    │
 │   ├───────────────────────────────┤   ├───────────────────────────────┤    │
 │   │                               │   │                               │    │
-│   │  ┌─────────────────────────┐  │   │  ┌─────────────────────────┐  │    │
-│   │  │ test_auth_logic.py     │  │   │  │ test_oauth_flow.py      │  │    │
-│   │  │ test_config_loading.py │  │   │  │ test_preflight_check.py │  │    │
-│   │  │ test_docs_client.py    │  │   │  │ test_proof_of_concept.py│  │    │
-│   │  │ test_docs_parsing.py   │  │   │  └─────────────────────────┘  │    │
+│   │  ┌─────────────────────────┐  │   │  ┌──────────────────────────┐ │    │
+│   │  │ test_auth_logic.py     │  │   │  │ test_preflight_check.py  │ │    │
+│   │  │ test_config_loading.py │  │   │  │ test_proof_of_concept.py │ │    │
+│   │  │ test_docs_client.py    │  │   │  │ test_resource_isolation.py│ │    │
+│   │  │ test_docs_parsing.py   │  │   │  └──────────────────────────┘ │    │
 │   │  │ test_preflight_logic.py│  │   │                               │    │
 │   │  └─────────────────────────┘  │   │  Real Google API calls       │    │
 │   │                               │   │  Requires OAuth credentials  │    │

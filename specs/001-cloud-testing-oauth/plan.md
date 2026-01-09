@@ -120,7 +120,7 @@ google_doc_utils/
 │   │   └── test_config_loading.py       # Test configuration logic
 │   └── tier_b/                  # Credential-required integration tests
 │       ├── __init__.py
-│       ├── test_oauth_flow.py           # Test real OAuth authentication
+│       ├── test_preflight_check.py      # Test credential validation
 │       ├── test_proof_of_concept.py     # Read "Gondwana" doc test
 │       └── test_resource_isolation.py   # Test dynamic resource creation
 │
