@@ -1,6 +1,6 @@
 # Markdown Extensions Specification
 
-**Version:** 1.2 Draft  
+**Version:** 1.4 Draft
 **Scope:** MEBDF (Basic Doc Formatting) & MEA (Anchors)
 
 These extensions augment standard markdown for round-trip editing of rich documents. They are designed for LLM readability, minimal verbosity, and preservation of formatting and anchored elements through edits.
@@ -223,6 +223,65 @@ Server creates a new anchor at this position.
 Use when adding content that needs an anchor point.
 ```
 
+#### Anchors in Headings
+
+When anchoring headings, place the anchor **after** the heading markers to preserve markdown compatibility. Standard markdown parsers require `#` characters at the start of the line to recognize headings.
+
+```markdown
+# {^ h1a2}Introduction
+## {^ h2b3}Background
+### {^ h3c4}Technical Details
+## {^ h2d5}Conclusion
+```
+
+---
+
+### Embedded Objects
+
+Embedded objects (images, drawings, charts, etc.) cannot be represented in markdown. Use the `{^= id type}` syntax to preserve them as opaque placeholders during round-trip editing.
+
+**Syntax:** `{^= id type}`
+
+| Component | Description |
+|-----------|-------------|
+| `{^=` | Opening marker (anchor + equals) |
+| `id` | Server-provided object ID |
+| `type` | Object type from allowed list |
+| `}` | Closing marker |
+
+#### Allowed Types
+
+| Type | Description |
+|------|-------------|
+| `image` | Inline or positioned image |
+| `drawing` | Google Drawing |
+| `chart` | Embedded chart (from Sheets) |
+| `equation` | Mathematical formula |
+| `video` | Embedded video |
+| `embed` | Other embedded object (catch-all) |
+
+#### Examples
+
+```markdown
+Here's the architecture diagram:
+
+{^= obj_x7y2 image}
+
+The linked spreadsheet shows quarterly data:
+
+{^= obj_k9m3 chart}
+
+See the formula below:
+
+{^= obj_p4q1 equation}
+```
+
+#### Behavior
+
+- **Export**: Embedded objects are replaced with `{^= id type}` placeholder
+- **Import**: Placeholder is matched by ID; original object is preserved unchanged
+- **Round-trip**: Object content is never modified, only its position in the document
+
 ---
 
 ### Anchor Links
@@ -281,6 +340,7 @@ Next steps:
 | Boolean off | `{!prop:false}` | Turn off boolean property |
 | Existing Anchor | `{^ id}` | Anchor with known ID |
 | Proposed Anchor | `{^}` | New anchor, server assigns ID |
+| Embedded Object | `{^= id type}` | Opaque placeholder for images, etc. |
 | Anchor Link | `[text](#^id)` | Link to anchor |
 
 ---
