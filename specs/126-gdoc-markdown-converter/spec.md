@@ -220,10 +220,10 @@ An MCP client exports content (full tab or section), makes targeted text edits w
 
 #### Embedded Objects
 
-- **FR-031**: System MUST convert embedded objects (images, drawings, charts, equations, videos) to `{^= id type}` placeholder syntax on export
+- **FR-031**: System MUST convert embedded objects (images, drawings, charts, videos) to `{^= id type}` placeholder syntax on export
 - **FR-032**: System MUST preserve embedded objects unchanged when their `{^= id type}` placeholder is present on import (object must already exist in document)
 - **FR-033**: System MUST return an error if an embedded object placeholder references an ID that does not exist in the document
-- **FR-034**: Embedded object types MUST be one of: `image`, `drawing`, `chart`, `equation`, `video`, `embed`
+- **FR-034**: Embedded object types MUST be one of: `image`, `drawing`, `chart`, `video`, `embed`
 
 #### Additional Format Support
 
@@ -285,3 +285,4 @@ An MCP client exports content (full tab or section), makes targeted text edits w
 - Cross-section operations (e.g., moving a section to a different location)
 - Creating new tabs programmatically
 - Editing embedded object content (images, drawings, charts are preserved but not modified)
+- Equation support (Google Docs equations have no object ID, making reliable preservation infeasible)

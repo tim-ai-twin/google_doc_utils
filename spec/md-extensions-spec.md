@@ -256,7 +256,6 @@ Embedded objects (images, drawings, charts, etc.) cannot be represented in markd
 | `image` | Inline or positioned image |
 | `drawing` | Google Drawing |
 | `chart` | Embedded chart (from Sheets) |
-| `equation` | Mathematical formula |
 | `video` | Embedded video |
 | `embed` | Other embedded object (catch-all) |
 
