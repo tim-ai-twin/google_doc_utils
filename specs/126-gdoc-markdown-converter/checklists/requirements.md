@@ -31,14 +31,16 @@
 
 ## Research Dependencies
 
-- [ ] **Heading Anchors**: Validate Google Docs headings have implicit anchor IDs accessible via API
-- [ ] **Anchor Stability**: Confirm anchor IDs remain stable when surrounding content is edited
+- [x] **Heading Anchors**: Validate Google Docs headings have implicit anchor IDs accessible via API
+  - Confirmed: Use `paragraph.paragraphStyle.headingId` (format: `h.{alphanumeric}`)
+- [x] **Anchor Stability**: Confirm anchor IDs remain stable when surrounding content is edited
+  - Confirmed: IDs stick to heading element, stable for normal edits; copy-paste may regenerate
 
 ## Notes
 
 - All spec quality items pass validation
-- **2 research questions remain** - validate heading anchor behavior early in implementation
-- Spec is ready for `/speckit.plan`
+- All research questions resolved - see research.md for details
+- Spec is ready for `/speckit.implement`
 - Updates 2026-01-09:
   - Tab is the top-level unit (MEBDF cannot represent tab boundaries)
   - Empty string tab ID for single-tab docs; error if multiple tabs

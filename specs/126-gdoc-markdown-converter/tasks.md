@@ -25,10 +25,10 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 **Purpose**: Create converter module structure and base classes
 
-- [ ] T001 Create converter module directory structure: `src/extended_google_doc_utils/converter/__init__.py`
-- [ ] T002 [P] Create data classes and enums in `src/extended_google_doc_utils/converter/types.py` (TabReference, HeadingAnchor, EmbeddedObjectType, ExportResult, ImportResult, HierarchyResult)
-- [ ] T003 [P] Create custom exceptions in `src/extended_google_doc_utils/converter/exceptions.py` (ConverterError, MultipleTabsError, AnchorNotFoundError, EmbeddedObjectNotFoundError, MebdfParseError)
-- [ ] T004 [P] Create test fixtures directory `tests/fixtures/mebdf_samples/` with sample MEBDF documents
+- [X] T001 Create converter module directory structure: `src/extended_google_doc_utils/converter/__init__.py`
+- [X] T002 [P] Create data classes and enums in `src/extended_google_doc_utils/converter/types.py` (TabReference, HeadingAnchor, EmbeddedObjectType, ExportResult, ImportResult, HierarchyResult)
+- [X] T003 [P] Create custom exceptions in `src/extended_google_doc_utils/converter/exceptions.py` (ConverterError, MultipleTabsError, AnchorNotFoundError, EmbeddedObjectNotFoundError, MebdfParseError)
+- [X] T004 [P] Create test fixtures directory `tests/fixtures/mebdf_samples/` with sample MEBDF documents
 
 ---
 
@@ -38,14 +38,14 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 **CRITICAL**: No user story work can begin until parser is complete
 
-- [ ] T005 Implement MEBDF tokenizer in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Token types for all MEBDF syntax
-- [ ] T006 Implement MEBDF AST nodes in `src/extended_google_doc_utils/converter/mebdf_parser.py` - TextNode, HeadingNode, FormattingNode, AnchorNode, EmbeddedObjectNode, etc.
-- [ ] T007 Implement inline parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Parse `{!props}text{/!}`, `{^ id}`, standard markdown inline
-- [ ] T008 Implement block parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Parse `{!props}` standalone, `{^= id type}`, headings, paragraphs
-- [ ] T009 Implement full document parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Combine inline/block, handle stateful block formatting
-- [ ] T010 [P] Implement MEBDF serializer in `src/extended_google_doc_utils/converter/mebdf_serializer.py` - AST back to MEBDF string
-- [ ] T011 [P] Create parser unit tests in `tests/tier_a/test_mebdf_parser.py` - All token types, edge cases, malformed input handling
-- [ ] T012 [P] Create serializer unit tests in `tests/tier_a/test_mebdf_serializer.py` - Round-trip AST preservation
+- [X] T005 Implement MEBDF tokenizer in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Token types for all MEBDF syntax
+- [X] T006 Implement MEBDF AST nodes in `src/extended_google_doc_utils/converter/mebdf_parser.py` - TextNode, HeadingNode, FormattingNode, AnchorNode, EmbeddedObjectNode, etc.
+- [X] T007 Implement inline parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Parse `{!props}text{/!}`, `{^ id}`, standard markdown inline
+- [X] T008 Implement block parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Parse `{!props}` standalone, `{^= id type}`, headings, paragraphs
+- [X] T009 Implement full document parser in `src/extended_google_doc_utils/converter/mebdf_parser.py` - Combine inline/block, handle stateful block formatting
+- [X] T010 [P] Implement MEBDF serializer in `src/extended_google_doc_utils/converter/mebdf_serializer.py` - AST back to MEBDF string
+- [X] T011 [P] Create parser unit tests in `tests/tier_a/test_mebdf_parser.py` - All token types, edge cases, malformed input handling
+- [X] T012 [P] Create serializer unit tests in `tests/tier_a/test_mebdf_serializer.py` - Round-trip AST preservation
 
 **Checkpoint**: MEBDF parser complete - user story implementation can begin
 
@@ -59,11 +59,11 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement tab resolution in `src/extended_google_doc_utils/converter/tab_utils.py` - Resolve empty tab_id for single-tab docs, raise MultipleTabsError
-- [ ] T014 [US1] Implement heading extractor in `src/extended_google_doc_utils/converter/hierarchy.py` - Extract headingId from paragraphStyle for HEADING_1-6
-- [ ] T015 [US1] Implement hierarchy formatter in `src/extended_google_doc_utils/converter/hierarchy.py` - Convert headings to `## {^ id}Text` markdown format
-- [ ] T016 [US1] Implement `get_hierarchy()` method in `src/extended_google_doc_utils/converter/converter.py` - Main entry point returning HierarchyResult
-- [ ] T017 [P] [US1] Create hierarchy unit tests in `tests/tier_a/test_hierarchy.py` - Mock API responses, verify heading extraction
+- [X] T013 [US1] Implement tab resolution in `src/extended_google_doc_utils/converter/tab_utils.py` - Resolve empty tab_id for single-tab docs, raise MultipleTabsError
+- [X] T014 [US1] Implement heading extractor in `src/extended_google_doc_utils/converter/hierarchy.py` - Extract headingId from paragraphStyle for HEADING_1-6
+- [X] T015 [US1] Implement hierarchy formatter in `src/extended_google_doc_utils/converter/hierarchy.py` - Convert headings to `## {^ id}Text` markdown format
+- [X] T016 [US1] Implement `get_hierarchy()` method in `src/extended_google_doc_utils/converter/converter.py` - Main entry point returning HierarchyResult
+- [X] T017 [P] [US1] Create hierarchy unit tests in `tests/tier_a/test_hierarchy.py` - Mock API responses, verify heading extraction
 - [ ] T018 [P] [US1] Create hierarchy e2e test in `tests/tier_b/test_converter_e2e.py` - Real doc with multiple heading levels
 
 **Checkpoint**: Hierarchy API functional - can navigate document structure
@@ -78,13 +78,13 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement text run extractor in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Extract textRun elements with formatting
-- [ ] T020 [US2] Implement inline formatting converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Bold/italic to markdown, highlight/underline/color/mono to `{!...}`
-- [ ] T021 [US2] Implement anchor extractor in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Extract comment anchors, bookmarks, heading anchors as `{^ id}`
-- [ ] T022 [US2] Implement embedded object detector in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Detect image/drawing/chart/video from inlineObjects, output `{^= id type}`
-- [ ] T023 [US2] Implement paragraph converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Handle lists, headings, block formatting state
-- [ ] T024 [US2] Implement table converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Convert Google Docs tables to markdown table syntax
-- [ ] T025 [US2] Implement `export_tab()` method in `src/extended_google_doc_utils/converter/converter.py` - Orchestrate full tab export
+- [X] T019 [US2] Implement text run extractor in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Extract textRun elements with formatting
+- [X] T020 [US2] Implement inline formatting converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Bold/italic to markdown, highlight/underline/color/mono to `{!...}`
+- [X] T021 [US2] Implement anchor extractor in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Extract comment anchors, bookmarks, heading anchors as `{^ id}`
+- [X] T022 [US2] Implement embedded object detector in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Detect image/drawing/chart/video from inlineObjects, output `{^= id type}`
+- [X] T023 [US2] Implement paragraph converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Handle lists, headings, block formatting state
+- [X] T024 [US2] Implement table converter in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py` - Convert Google Docs tables to markdown table syntax
+- [X] T025 [US2] Implement `export_tab()` method in `src/extended_google_doc_utils/converter/converter.py` - Orchestrate full tab export
 - [ ] T026 [P] [US2] Create export unit tests in `tests/tier_a/test_gdoc_to_mebdf.py` - Mock API, test each formatting type
 - [ ] T027 [P] [US2] Create export e2e test in `tests/tier_b/test_converter_e2e.py` - Real doc with mixed formatting
 
@@ -100,9 +100,9 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Implement section boundary calculator in `src/extended_google_doc_utils/converter/section_utils.py` - Find start/end indices for section by anchor ID
-- [ ] T029 [US3] Implement preamble extractor in `src/extended_google_doc_utils/converter/section_utils.py` - Handle empty string anchor_id for content before first heading
-- [ ] T030 [US3] Implement `export_section()` method in `src/extended_google_doc_utils/converter/converter.py` - Use section boundaries with export logic
+- [X] T028 [US3] Implement section boundary calculator in `src/extended_google_doc_utils/converter/section_utils.py` - Find start/end indices for section by anchor ID
+- [X] T029 [US3] Implement preamble extractor in `src/extended_google_doc_utils/converter/section_utils.py` - Handle empty string anchor_id for content before first heading
+- [X] T030 [US3] Implement `export_section()` method in `src/extended_google_doc_utils/converter/converter.py` - Use section boundaries with export logic
 - [ ] T031 [P] [US3] Create section export unit tests in `tests/tier_a/test_section_export.py` - Various heading levels, preamble, last section
 - [ ] T032 [P] [US3] Create section export e2e test in `tests/tier_b/test_converter_e2e.py` - Real doc section extraction
 
@@ -118,13 +118,13 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Implement text insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Build InsertTextRequest from AST
-- [ ] T034 [US4] Implement formatting request builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Build UpdateTextStyleRequest for bold/italic/highlight/etc.
-- [ ] T035 [US4] Implement anchor insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Handle `{^ id}` existing anchors, `{^}` proposed anchors
-- [ ] T036 [US4] Implement embedded object preservation in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Match `{^= id type}` to existing objects, validate existence
-- [ ] T037 [US4] Implement paragraph style builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Headings, lists, block formatting properties
-- [ ] T038 [US4] Implement table insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Convert markdown tables to Google Docs table requests
-- [ ] T039 [US4] Implement `import_tab()` method in `src/extended_google_doc_utils/converter/converter.py` - Orchestrate full tab replacement via batchUpdate
+- [X] T033 [US4] Implement text insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Build InsertTextRequest from AST
+- [X] T034 [US4] Implement formatting request builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Build UpdateTextStyleRequest for bold/italic/highlight/etc.
+- [X] T035 [US4] Implement anchor insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Handle `{^ id}` existing anchors, `{^}` proposed anchors
+- [X] T036 [US4] Implement embedded object preservation in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Match `{^= id type}` to existing objects, validate existence
+- [X] T037 [US4] Implement paragraph style builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Headings, lists, block formatting properties
+- [X] T038 [US4] Implement table insertion builder in `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py` - Convert markdown tables to Google Docs table requests
+- [X] T039 [US4] Implement `import_tab()` method in `src/extended_google_doc_utils/converter/converter.py` - Orchestrate full tab replacement via batchUpdate
 - [ ] T040 [P] [US4] Create import unit tests in `tests/tier_a/test_mebdf_to_gdoc.py` - Mock API, test each formatting type
 - [ ] T041 [P] [US4] Create import e2e test in `tests/tier_b/test_converter_e2e.py` - Real doc import with formatting verification
 
@@ -140,9 +140,9 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 ### Implementation for User Story 5
 
-- [ ] T042 [US5] Implement section replacement strategy in `src/extended_google_doc_utils/converter/section_utils.py` - Delete range, insert new content, preserve surrounding
-- [ ] T043 [US5] Implement preamble replacement in `src/extended_google_doc_utils/converter/section_utils.py` - Handle empty string anchor_id
-- [ ] T044 [US5] Implement `import_section()` method in `src/extended_google_doc_utils/converter/converter.py` - Combine section utils with import logic
+- [X] T042 [US5] Implement section replacement strategy in `src/extended_google_doc_utils/converter/section_utils.py` - Delete range, insert new content, preserve surrounding
+- [X] T043 [US5] Implement preamble replacement in `src/extended_google_doc_utils/converter/section_utils.py` - Handle empty string anchor_id
+- [X] T044 [US5] Implement `import_section()` method in `src/extended_google_doc_utils/converter/converter.py` - Combine section utils with import logic
 - [ ] T045 [P] [US5] Create section import unit tests in `tests/tier_a/test_section_import.py` - Various scenarios, boundary preservation
 - [ ] T046 [P] [US5] Create section import e2e test in `tests/tier_b/test_converter_e2e.py` - Real doc section replacement
 
@@ -172,11 +172,11 @@ Based on plan.md, this extends the existing `extended_google_doc_utils` package:
 
 **Purpose**: Final integration, public API, and cleanup
 
-- [ ] T052 [P] Create public API exports in `src/extended_google_doc_utils/converter/__init__.py` - Export GoogleDocsConverter, TabReference, exceptions, result types
-- [ ] T053 [P] Update package `__init__.py` at `src/extended_google_doc_utils/__init__.py` - Export converter module
-- [ ] T054 Add warning logging for unsupported formatting in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py`
+- [X] T052 [P] Create public API exports in `src/extended_google_doc_utils/converter/__init__.py` - Export GoogleDocsConverter, TabReference, exceptions, result types
+- [X] T053 [P] Update package `__init__.py` at `src/extended_google_doc_utils/__init__.py` - Export converter module
+- [X] T054 Add warning logging for unsupported formatting in `src/extended_google_doc_utils/converter/gdoc_to_mebdf.py`
 - [ ] T055 [P] Validate quickstart.md code examples work end-to-end
-- [ ] T056 Code review and cleanup across all converter modules
+- [X] T056 Code review and cleanup across all converter modules
 
 ---
 

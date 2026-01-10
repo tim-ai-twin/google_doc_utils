@@ -3,4 +3,7 @@
 __version__ = "0.1.0"
 __author__ = "AI Twin"
 
-# Public API exports (empty initially)
+# Public API exports
+from extended_google_doc_utils import converter
+
+__all__ = ["converter"]
