@@ -23,7 +23,7 @@ jobs:
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra mcp
 
       - name: Run Tier A tests
         run: uv run pytest -m tier_a -v
