@@ -1,13 +1,14 @@
 [project]
 name = "google_doc_utils"
 version = "0.1.0"
-description = "Extended utilities for Google Docs API with OAuth 2.0 authentication"
+description = "MCP server for Google Docs enabling LLMs to read and edit documents"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "google-auth-oauthlib>=1.2.0",
     "google-auth-httplib2>=0.2.0",
     "google-api-python-client>=2.100.0",
+    "mcp>=1.25.0",
     "pytest>=7.4.0",
     "pytest-mock>=3.12.0",
 ]

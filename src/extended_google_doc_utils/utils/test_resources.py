@@ -130,13 +130,24 @@ class TestResourceManager:
                 "Initialize TestResourceManager with valid OAuth credentials."
             )
 
+        from google.oauth2.credentials import Credentials as GoogleCredentials
         from googleapiclient.discovery import build
 
         folder_name = name or self.generate_unique_title("test-folder")
         actual_test_name = test_name or "unknown"
 
+        # Convert OAuthCredentials to google.oauth2.credentials.Credentials
+        google_creds = GoogleCredentials(
+            token=self.credentials.access_token,
+            refresh_token=self.credentials.refresh_token,
+            token_uri=self.credentials.token_uri,
+            client_id=self.credentials.client_id,
+            client_secret=self.credentials.client_secret,
+            scopes=self.credentials.scopes,
+        )
+
         # Create folder using Drive API
-        service = build("drive", "v3", credentials=self.credentials)
+        service = build("drive", "v3", credentials=google_creds)
         file_metadata = {
             "name": folder_name,
             "mimeType": "application/vnd.google-apps.folder",
@@ -204,9 +215,20 @@ class TestResourceManager:
         try:
             if resource.resource_type in (ResourceType.DOCUMENT, ResourceType.FOLDER):
                 # Use Drive API to delete (works for both docs and folders)
+                from google.oauth2.credentials import Credentials as GoogleCredentials
                 from googleapiclient.discovery import build
 
-                service = build("drive", "v3", credentials=self.credentials)
+                # Convert OAuthCredentials to google.oauth2.credentials.Credentials
+                google_creds = GoogleCredentials(
+                    token=self.credentials.access_token,
+                    refresh_token=self.credentials.refresh_token,
+                    token_uri=self.credentials.token_uri,
+                    client_id=self.credentials.client_id,
+                    client_secret=self.credentials.client_secret,
+                    scopes=self.credentials.scopes,
+                )
+
+                service = build("drive", "v3", credentials=google_creds)
                 service.files().delete(fileId=resource_id).execute()
                 resource.cleanup_succeeded = True
                 return True
