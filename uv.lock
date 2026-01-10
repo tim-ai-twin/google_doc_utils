@@ -453,6 +453,7 @@ dependencies = [
     { name = "google-api-python-client" },
     { name = "google-auth-httplib2" },
     { name = "google-auth-oauthlib" },
+    { name = "mcp" },
     { name = "pytest" },
     { name = "pytest-mock" },
 ]
@@ -462,22 +463,19 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
-mcp = [
-    { name = "mcp" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "google-api-python-client", specifier = ">=2.100.0" },
     { name = "google-auth-httplib2", specifier = ">=0.2.0" },
     { name = "google-auth-oauthlib", specifier = ">=1.2.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.25.0" },
+    { name = "mcp", specifier = ">=1.25.0" },
     { name = "pytest", specifier = ">=7.4.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "pytest-mock", specifier = ">=3.12.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
 ]
-provides-extras = ["dev", "mcp"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = []
