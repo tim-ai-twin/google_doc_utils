@@ -27,7 +27,6 @@ from extended_google_doc_utils.converter.mebdf_parser import (
     MebdfParser,
     ParagraphNode,
     TextNode,
-    Token,
     Tokenizer,
     TokenType,
 )

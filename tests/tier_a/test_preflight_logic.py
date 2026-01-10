@@ -13,7 +13,6 @@ import pytest
 from extended_google_doc_utils.auth.credential_manager import OAuthCredentials
 from extended_google_doc_utils.auth.preflight_check import (
     PreflightCheck,
-    PreflightCheckResult,
 )
 
 

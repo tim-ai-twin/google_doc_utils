@@ -6,7 +6,7 @@ between Google Docs and MEBDF (Markdown Extensions for Basic Doc Formatting).
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -25,6 +25,9 @@ from extended_google_doc_utils.converter.types import (
     ImportResult,
     TabReference,
 )
+
+if TYPE_CHECKING:
+    from extended_google_doc_utils.auth.credential_manager import OAuthCredentials
 
 
 class GoogleDocsConverter:
@@ -53,20 +56,35 @@ class GoogleDocsConverter:
         ```
     """
 
-    def __init__(self, credentials: Credentials):
-        """Initialize the converter with Google API credentials.
+    def __init__(self, credentials: OAuthCredentials):
+        """Initialize the converter with OAuth credentials.
 
         Args:
-            credentials: OAuth2 credentials for Google Docs API access.
+            credentials: OAuth credentials from CredentialManager.
         """
-        self.credentials = credentials
+        self._oauth_credentials = credentials
+
+        # Convert OAuthCredentials to google.oauth2.credentials.Credentials
+        self._google_credentials = Credentials(
+            token=credentials.access_token,
+            refresh_token=credentials.refresh_token,
+            token_uri=credentials.token_uri,
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret,
+            scopes=credentials.scopes,
+        )
         self._service = None
+
+    @property
+    def credentials(self) -> Credentials:
+        """Return Google API credentials."""
+        return self._google_credentials
 
     @property
     def service(self):
         """Lazy-load the Google Docs API service."""
         if self._service is None:
-            self._service = build("docs", "v1", credentials=self.credentials)
+            self._service = build("docs", "v1", credentials=self._google_credentials)
         return self._service
 
     def _get_document(self, document_id: str) -> dict[str, Any]:

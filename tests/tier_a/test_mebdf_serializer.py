@@ -6,7 +6,6 @@ Tests cover:
 - Property serialization
 """
 
-import pytest
 
 from extended_google_doc_utils.converter.mebdf_parser import (
     AnchorNode,
