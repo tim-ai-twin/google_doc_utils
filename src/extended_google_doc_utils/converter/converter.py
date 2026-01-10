@@ -87,6 +87,13 @@ class GoogleDocsConverter:
             self._service = build("docs", "v1", credentials=self._google_credentials)
         return self._service
 
+    @property
+    def drive_service(self):
+        """Lazy-load the Google Drive API service."""
+        if not hasattr(self, "_drive_service") or self._drive_service is None:
+            self._drive_service = build("drive", "v3", credentials=self._google_credentials)
+        return self._drive_service
+
     def _get_document(self, document_id: str) -> dict[str, Any]:
         """Fetch a document from the Google Docs API.
 
@@ -97,6 +104,90 @@ class GoogleDocsConverter:
             The document resource from the API.
         """
         return self.service.documents().get(documentId=document_id).execute()
+
+    # -------------------------------------------------------------------------
+    # Discovery Operations
+    # -------------------------------------------------------------------------
+
+    def list_documents(
+        self, max_results: int = 25, query: str | None = None
+    ) -> list[dict[str, Any]]:
+        """List Google Docs accessible by the user.
+
+        Args:
+            max_results: Maximum number of documents to return (default 25).
+            query: Optional search query to filter documents.
+
+        Returns:
+            List of document summaries with id, title, last_modified, owner.
+        """
+        # Build query to filter for Google Docs only
+        base_query = "mimeType='application/vnd.google-apps.document'"
+        if query:
+            base_query = f"{base_query} and name contains '{query}'"
+
+        response = (
+            self.drive_service.files()
+            .list(
+                q=base_query,
+                pageSize=max_results,
+                fields="files(id,name,modifiedTime,owners)",
+                orderBy="modifiedTime desc",
+            )
+            .execute()
+        )
+
+        documents = []
+        for file in response.get("files", []):
+            owners = file.get("owners", [{}])
+            owner_email = owners[0].get("emailAddress", "") if owners else ""
+            documents.append(
+                {
+                    "document_id": file.get("id", ""),
+                    "title": file.get("name", ""),
+                    "last_modified": file.get("modifiedTime", ""),
+                    "owner": owner_email,
+                }
+            )
+        return documents
+
+    def get_metadata(self, document_id: str) -> dict[str, Any]:
+        """Get metadata for a document including tabs.
+
+        Args:
+            document_id: Google Doc ID.
+
+        Returns:
+            Document metadata including title, tabs, permissions.
+        """
+        document = self._get_document(document_id)
+
+        # Extract tabs from document
+        tabs = []
+        doc_tabs = document.get("tabs", [])
+
+        # Single-tab documents may not have explicit tabs structure
+        if not doc_tabs:
+            tabs.append({"tab_id": "", "title": "Main", "index": 0})
+        else:
+            for i, tab in enumerate(doc_tabs):
+                tab_props = tab.get("tabProperties", {})
+                tabs.append(
+                    {
+                        "tab_id": tab_props.get("tabId", ""),
+                        "title": tab_props.get("title", f"Tab {i + 1}"),
+                        "index": tab_props.get("index", i),
+                    }
+                )
+
+        return {
+            "document_id": document_id,
+            "title": document.get("title", ""),
+            "tabs": tabs,
+            # TODO: Add permission checking when needed
+            "can_edit": True,
+            "can_comment": True,
+        }
 
     # -------------------------------------------------------------------------
     # Hierarchy Operations
