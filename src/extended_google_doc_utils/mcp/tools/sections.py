@@ -97,9 +97,11 @@ def import_section(
 
     The content should include the section heading (unless replacing preamble).
     Use MEBDF format for formatting:
-    - Standard markdown: # headings, **bold**, *italic*, [links](url)
-    - Extensions: {!highlight:yellow}text{/!}, {!underline}text{/!}
+    - Standard markdown: # headings, **bold**, *italic*, [links](url), - bullets, 1. numbered
+    - {!underline}underlined text{/!}
     - Preserve images: Include {^= objectId image} placeholders
+
+    NOTE: Text color and background color are not yet supported for import.
 
     Args:
         document_id: Google Doc ID (from the document URL).
