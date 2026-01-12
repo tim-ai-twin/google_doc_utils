@@ -1,27 +1,93 @@
-# Extended Google Doc Utils
+# Google Docs MCP Server
 
 [![Tier A Tests](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-a-tests.yml/badge.svg)](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-a-tests.yml)
 [![Tier B Tests](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-b-tests.yml/badge.svg)](https://github.com/tim-ai-twin/google_doc_utils/actions/workflows/tier-b-tests.yml)
 
-A Python-based MCP (Model Context Protocol) server that provides high-level utilities for reading, writing, and managing Google Docs with advanced formatting support.
+An MCP server that enables LLMs to read and edit Google Docs. Provides 10 tools for document navigation, section editing, and formatting.
+
+## Quick Start
+
+### 1. Install
+
+```bash
+git clone https://github.com/tim-ai-twin/google_doc_utils.git
+cd google_doc_utils
+uv sync
+```
+
+### 2. Set Up OAuth Credentials
+
+```bash
+uv run python scripts/bootstrap_oauth.py
+```
+
+This opens a browser for Google OAuth and saves credentials to `.credentials/token.json`.
+
+### 3. Configure Your MCP Client
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "google-docs": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
+      "cwd": "/path/to/google_doc_utils"
+    }
+  }
+}
+```
+
+**Claude Code** (`.claude/settings.json` in your project):
+```json
+{
+  "mcpServers": {
+    "google-docs": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
+      "cwd": "/path/to/google_doc_utils"
+    }
+  }
+}
+```
+
+**Cursor** (`~/.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "google-docs": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
+      "cwd": "/path/to/google_doc_utils"
+    }
+  }
+}
+```
+
+### 4. Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_documents` | List Google Docs accessible to the user |
+| `get_metadata` | Get document metadata including tabs |
+| `get_hierarchy` | Get heading structure with anchor IDs |
+| `export_section` | Export a section to markdown |
+| `import_section` | Replace a section's content (other sections unchanged) |
+| `export_tab` | Export entire tab to markdown |
+| `import_tab` | Replace entire tab content |
+| `normalize_formatting` | Apply consistent fonts/styles |
+| `extract_styles` | Extract formatting from a document |
+| `apply_styles` | Apply extracted styles to another document |
 
 ## Overview
 
 This project provides:
-- **Extended Google Docs API**: Read/write Google Docs including formatting, comments, and Drive metadata
-- **Format Conversion**: Convert between Google Doc API representations and an internal "Extended Doc Format"
-- **MCP Server**: Exposes high-level tools (e.g., `insert_markdown`, `replace_section_with_markdown`) instead of low-level Google API primitives
-- **Two-Tier Testing**: Unit tests that run without credentials and integration tests with real Google APIs
+- **MCP Server**: 10 tools for LLM document manipulation
+- **Section Isolation**: Edit one section without affecting others
+- **MEBDF Format**: Markdown with extensions for Google Docs formatting
+- **Two-Tier Testing**: Unit tests with mocks + e2e tests against real Google Docs
 
-## Features
-
-- Clean layered architecture separating core logic, Google adapters, and MCP server
-- Support for both consumer Gmail and Google Workspace accounts
-- OAuth 2.0 authentication with long-lived refresh tokens
-- Comprehensive test coverage with fixture-based unit tests
-- GitHub Actions CI with secure credential handling
-
-## Quick Start
+## Development Quick Start
 
 ### Prerequisites
 
