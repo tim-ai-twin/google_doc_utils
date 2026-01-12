@@ -109,6 +109,45 @@ class TestConvertTextWithStyle:
         assert isinstance(node, FormattingNode)
         assert node.properties.get("mono") is True
 
+    def test_custom_font_family(self):
+        """Convert custom font family to MEBDF font property."""
+        warnings = []
+        style = {"weightedFontFamily": {"fontFamily": "Comic Sans MS"}}
+        node = convert_text_with_style("Fun text", style, warnings)
+
+        assert isinstance(node, FormattingNode)
+        assert node.properties.get("font") == "Comic Sans MS"
+
+    def test_font_with_weight(self):
+        """Convert font with custom weight."""
+        warnings = []
+        style = {"weightedFontFamily": {"fontFamily": "Roboto", "weight": 300}}
+        node = convert_text_with_style("Light text", style, warnings)
+
+        assert isinstance(node, FormattingNode)
+        assert node.properties.get("font") == "Roboto"
+        assert node.properties.get("weight") == 300
+
+    def test_arial_default_not_exported(self):
+        """Arial with default weight is not exported (it's the default)."""
+        warnings = []
+        style = {"weightedFontFamily": {"fontFamily": "Arial", "weight": 400}}
+        node = convert_text_with_style("Default text", style, warnings)
+
+        assert isinstance(node, TextNode)
+        assert node.content == "Default text"
+
+    def test_arial_bold_weight_exported(self):
+        """Arial with bold weight exports the weight."""
+        warnings = []
+        style = {"weightedFontFamily": {"fontFamily": "Arial", "weight": 700}}
+        node = convert_text_with_style("Bold Arial", style, warnings)
+
+        assert isinstance(node, FormattingNode)
+        assert node.properties.get("weight") == 700
+        # Font not exported because Arial is default
+        assert "font" not in node.properties
+
     def test_strikethrough_warning(self):
         """Strikethrough generates a warning."""
         warnings = []

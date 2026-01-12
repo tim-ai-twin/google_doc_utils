@@ -351,7 +351,9 @@ def convert_text_with_style(text: str, style: dict[str, Any], warnings: list[str
     bg_color = style.get("backgroundColor", {}).get("color", {}).get("rgbColor", {})
 
     # Get font
-    font_family = style.get("weightedFontFamily", {}).get("fontFamily", "")
+    weighted_font = style.get("weightedFontFamily", {})
+    font_family = weighted_font.get("fontFamily", "")
+    font_weight = weighted_font.get("weight", 400)
     is_mono = font_family.lower() in ("roboto mono", "consolas", "courier new", "monospace")
 
     # Check for unsupported formatting
@@ -380,6 +382,15 @@ def convert_text_with_style(text: str, style: dict[str, Any], warnings: list[str
 
     if is_mono:
         mebdf_props["mono"] = True
+    elif font_family and font_family.lower() != "arial":
+        # Export non-default font families (Arial is the default)
+        mebdf_props["font"] = font_family
+        if font_weight and font_weight != 400:
+            mebdf_props["weight"] = font_weight
+
+    # Export font weight even for Arial if it's non-standard
+    if font_family.lower() == "arial" and font_weight and font_weight != 400:
+        mebdf_props["weight"] = font_weight
 
     if bg_color:
         hex_color = rgb_to_hex(bg_color)
