@@ -1,12 +1,11 @@
 """Entry point for running the MCP server.
 
 Usage:
-    python -m extended_google_doc_utils.mcp.server
-
-Or:
     python -m extended_google_doc_utils.mcp
+    python -m extended_google_doc_utils.mcp --credentials /path/to/token.json
 """
 
+import argparse
 import logging
 import sys
 
@@ -20,10 +19,18 @@ logging.basicConfig(
 
 def main() -> None:
     """Run the Google Docs MCP server."""
+    parser = argparse.ArgumentParser(description="Google Docs MCP Server")
+    parser.add_argument(
+        "--credentials",
+        type=str,
+        help="Path to OAuth credentials JSON file (default: .credentials/token.json)",
+    )
+    args = parser.parse_args()
+
     from extended_google_doc_utils.mcp.server import run_server
 
     try:
-        run_server()
+        run_server(credentials_path=args.credentials)
     except KeyboardInterrupt:
         logging.info("Server stopped by user")
     except Exception as e:

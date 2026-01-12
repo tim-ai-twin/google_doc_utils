@@ -60,13 +60,17 @@ def get_converter() -> GoogleDocsConverter:
     return _converter
 
 
-def initialize_server() -> None:
+def initialize_server(credentials_path: str | None = None) -> None:
     """Initialize the MCP server with credentials and converter.
 
     This function:
-    1. Detects credential source (local file or environment)
-    2. Loads and refreshes OAuth credentials
+    1. Loads OAuth credentials from file or environment
+    2. Refreshes credentials if needed
     3. Creates the GoogleDocsConverter instance
+
+    Args:
+        credentials_path: Optional path to credentials JSON file.
+            If not provided, uses .credentials/token.json or environment variables.
 
     Raises:
         CredentialError: If credentials cannot be loaded.
@@ -75,19 +79,23 @@ def initialize_server() -> None:
 
     logger.info("Initializing Google Docs MCP server...")
 
-    # Detect credential source
-    env_type = CredentialSourceDetector.detect_environment()
-    source = CredentialSourceDetector.get_credential_source(env_type)
+    if credentials_path:
+        # Load from specified file
+        _credentials = _load_credentials_from_file(credentials_path)
+    else:
+        # Auto-detect credential source
+        env_type = CredentialSourceDetector.detect_environment()
+        source = CredentialSourceDetector.get_credential_source(env_type)
 
-    if source == CredentialSource.NONE:
-        raise CredentialError(
-            "No credential source available. "
-            "Run 'python scripts/bootstrap_oauth.py' to set up credentials."
-        )
+        if source == CredentialSource.NONE:
+            raise CredentialError(
+                "No credential source available. "
+                "Run 'python scripts/bootstrap_oauth.py' to set up credentials."
+            )
 
-    # Load credentials
-    manager = CredentialManager(source)
-    _credentials = manager.get_credentials_for_testing()
+        # Load credentials
+        manager = CredentialManager(source)
+        _credentials = manager.get_credentials_for_testing()
 
     if _credentials is None:
         raise CredentialError(
@@ -99,6 +107,50 @@ def initialize_server() -> None:
     _converter = GoogleDocsConverter(_credentials)
 
     logger.info("Google Docs MCP server initialized successfully")
+
+
+def _load_credentials_from_file(credentials_path: str) -> OAuthCredentials:
+    """Load credentials from a specific file path.
+
+    Args:
+        credentials_path: Path to the credentials JSON file.
+
+    Returns:
+        Loaded OAuth credentials.
+
+    Raises:
+        CredentialError: If file cannot be read or parsed.
+    """
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
+    from extended_google_doc_utils.auth.credential_manager import OAuthCredentials
+
+    path = Path(credentials_path)
+    if not path.exists():
+        raise CredentialError(f"Credentials file not found: {credentials_path}")
+
+    try:
+        with open(path) as f:
+            data = json.load(f)
+
+        # Parse expiry if present
+        token_expiry = None
+        if "token_expiry" in data:
+            token_expiry = datetime.fromisoformat(data["token_expiry"])
+
+        return OAuthCredentials(
+            access_token=data["access_token"],
+            refresh_token=data["refresh_token"],
+            token_expiry=token_expiry,
+            client_id=data["client_id"],
+            client_secret=data["client_secret"],
+            scopes=data.get("scopes", []),
+            token_uri=data.get("token_uri", "https://oauth2.googleapis.com/token"),
+        )
+    except (json.JSONDecodeError, KeyError) as e:
+        raise CredentialError(f"Invalid credentials file: {e}")
 
 
 def create_server() -> FastMCP:
@@ -142,14 +194,17 @@ def register_tools() -> None:
     logger.info("All MCP tools registered")
 
 
-def run_server() -> None:
+def run_server(credentials_path: str | None = None) -> None:
     """Run the MCP server (blocking).
 
     This is the main entry point for running the server.
     It initializes credentials, registers tools, and starts the server.
+
+    Args:
+        credentials_path: Optional path to credentials JSON file.
     """
     # Initialize server
-    initialize_server()
+    initialize_server(credentials_path)
 
     # Register all tools
     register_tools()

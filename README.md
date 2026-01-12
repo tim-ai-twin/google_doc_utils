@@ -25,14 +25,15 @@ This opens a browser for Google OAuth and saves credentials to `.credentials/tok
 
 ### 3. Configure Your MCP Client
 
+Replace `/path/to/google_doc_utils` with your actual installation path.
+
 **Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
     "google-docs": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
-      "cwd": "/path/to/google_doc_utils"
+      "command": "/path/to/google_doc_utils/.venv/bin/python",
+      "args": ["-m", "extended_google_doc_utils.mcp", "--credentials", "/path/to/google_doc_utils/.credentials/token.json"]
     }
   }
 }
@@ -43,9 +44,8 @@ This opens a browser for Google OAuth and saves credentials to `.credentials/tok
 {
   "mcpServers": {
     "google-docs": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
-      "cwd": "/path/to/google_doc_utils"
+      "command": "/path/to/google_doc_utils/.venv/bin/python",
+      "args": ["-m", "extended_google_doc_utils.mcp", "--credentials", "/path/to/google_doc_utils/.credentials/token.json"]
     }
   }
 }
@@ -56,9 +56,8 @@ This opens a browser for Google OAuth and saves credentials to `.credentials/tok
 {
   "mcpServers": {
     "google-docs": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "extended_google_doc_utils.mcp.server"],
-      "cwd": "/path/to/google_doc_utils"
+      "command": "/path/to/google_doc_utils/.venv/bin/python",
+      "args": ["-m", "extended_google_doc_utils.mcp", "--credentials", "/path/to/google_doc_utils/.credentials/token.json"]
     }
   }
 }
