@@ -18,6 +18,7 @@ from pydantic import Field
 from extended_google_doc_utils.converter.types import TabReference
 from extended_google_doc_utils.mcp.errors import (
     AnchorNotFoundError,
+    FontValidationError as FontValidationMcpError,
     MebdfParseError,
     MultipleTabsError,
     create_error_response,
@@ -98,10 +99,38 @@ def import_section(
     The content should include the section heading (unless replacing preamble).
     Use MEBDF format for formatting:
     - Standard markdown: # headings, **bold**, *italic*, [links](url), - bullets, 1. numbered
-    - {!underline}underlined text{/!}
-    - Preserve images: Include {^= objectId image} placeholders
+    - Inline code: `code` renders in monospace font
 
-    NOTE: Text color and background color are not yet supported for import.
+    Text formatting (inline):
+    - {!underline}underlined text{/!}
+    - {!color:#FF0000}red text{/!} or {!color:red}red{/!}
+    - {!highlight:yellow}highlighted{/!} - background color
+    - {!mono}monospace{/!} or {!font:Roboto}custom font{/!}
+    - {!font:Roboto, weight:300}light weight{/!} (100-900 or: thin, light, bold, etc.)
+    - {!size:14pt}larger text{/!}
+
+    Paragraph formatting:
+    - {!align:center}centered text{/!} (left, center, right, justify)
+    - {!line-spacing:1.5}spaced text{/!} (single, 1.15, 1.5, double)
+    - {!space-before:12pt, space-after:6pt}with spacing{/!}
+    - {!indent-left:0.5in}indented{/!}
+
+    Combine properties: {!color:#0000FF, size:16pt, align:center}styled{/!}
+    Preserve images: Include {^= objectId image} placeholders
+
+    Available fonts (default Google Docs):
+    - Sans-serif: Arial, Roboto, Lato, Montserrat, Open Sans, Raleway, Work Sans,
+      Noto Sans, Nunito, Oswald, PT Sans, Ubuntu, Verdana, Comfortaa, Trebuchet MS
+    - Serif: Georgia, Times New Roman, Merriweather, Playfair Display, PT Serif, Spectral
+    - Monospace: Courier New, Roboto Mono, Source Code Pro, Ubuntu Mono
+    - Handwriting: Caveat, Dancing Script, Pacifico, Lobster, Comic Sans MS
+
+    Common weights: 100 (thin), 300 (light), 400 (normal), 500 (medium), 700 (bold), 900 (black)
+    Note: Not all fonts support all weights. The system will error if an unsupported weight is used.
+
+    IMPORTANT: Use font family and weight separately:
+    - Correct: {!font:Roboto, weight:300}light text{/!}
+    - Wrong: {!font:Roboto Light}text{/!} (will error - use weight property instead)
 
     Args:
         document_id: Google Doc ID (from the document URL).
@@ -160,5 +189,13 @@ def _handle_section_error(
         return AnchorNotFoundError(document_id, anchor_id).to_error_response()
     elif isinstance(error, conv_exc.MebdfParseError):
         return MebdfParseError(str(error)).to_error_response()
+    elif isinstance(error, conv_exc.FontValidationError):
+        return FontValidationMcpError(
+            error.error_code,
+            str(error),
+            error.font_name,
+            error.weight,
+            error.suggestions,
+        ).to_error_response()
     else:
         return create_error_response(error)

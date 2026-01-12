@@ -81,3 +81,32 @@ class MebdfParseError(ConverterError):
         self._message = message
         prefix = f"Line {line}: " if line else ""
         super().__init__(f"MEBDF parse error: {prefix}{message}")
+
+
+class FontValidationError(ConverterError):
+    """Raised when MEBDF content contains invalid font specification.
+
+    This error indicates the specified font family or weight is not
+    available in Google Docs. The error includes suggestions for
+    valid alternatives.
+
+    Attributes:
+        error_code: Type of error (INVALID_FONT_FAMILY, INVALID_FONT_WEIGHT, INVALID_FONT_VARIANT)
+        font_name: The invalid font name if applicable.
+        weight: The invalid weight if applicable.
+        suggestions: List of valid alternatives.
+    """
+
+    def __init__(
+        self,
+        error_code: str,
+        message: str,
+        font_name: str | None = None,
+        weight: int | str | None = None,
+        suggestions: list[str] | None = None,
+    ):
+        super().__init__(message)
+        self.error_code = error_code
+        self.font_name = font_name
+        self.weight = weight
+        self.suggestions = suggestions or []

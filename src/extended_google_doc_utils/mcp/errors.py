@@ -163,6 +163,41 @@ class GoogleAPIError(MCPError):
         self.status_code = status_code
 
 
+class FontValidationError(MCPError):
+    """Raised when font family or weight is invalid."""
+
+    suggestion = "Check the available fonts list in the tool description. Use font family and weight separately."
+
+    def __init__(
+        self,
+        error_code: str,
+        message: str,
+        font_name: str | None = None,
+        weight: int | str | None = None,
+        suggestions: list[str] | None = None,
+    ):
+        super().__init__(message)
+        self.error_code = error_code
+        self.font_name = font_name
+        self.weight = weight
+        self.font_suggestions = suggestions or []
+
+    def to_error_response(self) -> ErrorResponse:
+        """Convert to structured error response with font-specific details."""
+        suggestion_text = self.suggestion
+        if self.font_suggestions:
+            suggestion_text += f" Suggestions: {', '.join(self.font_suggestions)}"
+
+        return ErrorResponse(
+            success=False,
+            error=ErrorDetail(
+                type=self.error_code,
+                message=str(self),
+                suggestion=suggestion_text,
+            ),
+        )
+
+
 def create_error_response(error: Exception) -> ErrorResponse:
     """Create a structured error response from any exception.
 
