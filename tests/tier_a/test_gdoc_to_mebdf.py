@@ -405,6 +405,160 @@ class TestConvertElements:
         assert len(doc.children[0].items) == 2
 
 
+class TestHeadingFormatting:
+    """Tests for heading text formatting extraction.
+
+    Headings should preserve inline formatting (bold, italic, font, color, etc.)
+    just like body paragraphs.
+    """
+
+    def test_heading_with_bold_text(self):
+        """Export heading containing bold text."""
+        elements = [
+            {
+                "paragraph": {
+                    "paragraphStyle": {
+                        "namedStyleType": "HEADING_1",
+                        "headingId": "h.test1",
+                    },
+                    "elements": [
+                        {"textRun": {"content": "Bold "}},
+                        {"textRun": {"content": "Heading", "textStyle": {"bold": True}}},
+                        {"textRun": {"content": "\n"}},
+                    ],
+                },
+                "startIndex": 1,
+            }
+        ]
+
+        doc, anchors, embedded, warnings = convert_elements(elements, {}, {})
+
+        assert len(doc.children) == 1
+        heading = doc.children[0]
+        assert isinstance(heading, HeadingNode)
+        assert heading.level == 1
+        # Should have mixed content: plain text + bold
+        assert len(heading.content) >= 2
+        # Find the bold node
+        bold_nodes = [n for n in heading.content if isinstance(n, BoldNode)]
+        assert len(bold_nodes) == 1
+
+    def test_heading_with_custom_font(self):
+        """Export heading with custom font formatting."""
+        elements = [
+            {
+                "paragraph": {
+                    "paragraphStyle": {
+                        "namedStyleType": "HEADING_2",
+                        "headingId": "h.test2",
+                    },
+                    "elements": [
+                        {
+                            "textRun": {
+                                "content": "Custom Font Heading\n",
+                                "textStyle": {
+                                    "weightedFontFamily": {
+                                        "fontFamily": "Roboto",
+                                        "weight": 300,
+                                    }
+                                },
+                            }
+                        }
+                    ],
+                },
+                "startIndex": 1,
+            }
+        ]
+
+        doc, anchors, embedded, warnings = convert_elements(elements, {}, {})
+
+        heading = doc.children[0]
+        assert isinstance(heading, HeadingNode)
+        # Should have FormattingNode with font properties
+        assert len(heading.content) == 1
+        formatting_node = heading.content[0]
+        assert isinstance(formatting_node, FormattingNode)
+        assert formatting_node.properties.get("font") == "Roboto"
+        assert formatting_node.properties.get("weight") == 300
+
+    def test_heading_with_text_color(self):
+        """Export heading with colored text."""
+        elements = [
+            {
+                "paragraph": {
+                    "paragraphStyle": {
+                        "namedStyleType": "HEADING_1",
+                        "headingId": "h.color",
+                    },
+                    "elements": [
+                        {
+                            "textRun": {
+                                "content": "Red Heading\n",
+                                "textStyle": {
+                                    "foregroundColor": {
+                                        "color": {
+                                            "rgbColor": {"red": 1.0, "green": 0.0, "blue": 0.0}
+                                        }
+                                    }
+                                },
+                            }
+                        }
+                    ],
+                },
+                "startIndex": 1,
+            }
+        ]
+
+        doc, anchors, embedded, warnings = convert_elements(elements, {}, {})
+
+        heading = doc.children[0]
+        assert isinstance(heading, HeadingNode)
+        formatting_node = heading.content[0]
+        assert isinstance(formatting_node, FormattingNode)
+        assert formatting_node.properties.get("color") == "#ff0000"
+
+    def test_heading_with_mixed_formatting(self):
+        """Export heading with multiple formatting styles."""
+        elements = [
+            {
+                "paragraph": {
+                    "paragraphStyle": {
+                        "namedStyleType": "HEADING_1",
+                        "headingId": "h.mixed",
+                    },
+                    "elements": [
+                        {"textRun": {"content": "Normal "}},
+                        {
+                            "textRun": {
+                                "content": "bold",
+                                "textStyle": {"bold": True},
+                            }
+                        },
+                        {"textRun": {"content": " and "}},
+                        {
+                            "textRun": {
+                                "content": "italic",
+                                "textStyle": {"italic": True},
+                            }
+                        },
+                        {"textRun": {"content": " text\n"}},
+                    ],
+                },
+                "startIndex": 1,
+            }
+        ]
+
+        doc, anchors, embedded, warnings = convert_elements(elements, {}, {})
+
+        heading = doc.children[0]
+        assert isinstance(heading, HeadingNode)
+        # Should have TextNode, BoldNode, TextNode, ItalicNode, TextNode
+        bold_nodes = [n for n in heading.content if isinstance(n, BoldNode)]
+        italic_nodes = [n for n in heading.content if isinstance(n, ItalicNode)]
+        assert len(bold_nodes) == 1
+        assert len(italic_nodes) == 1
+
+
 class TestExportBody:
     """Tests for full body export."""
 

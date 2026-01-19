@@ -879,6 +879,130 @@ class TestParagraphFormatting:
         assert style["indentFirstLine"]["magnitude"] == 18.0
 
 
+class TestHeadingTextFormatting:
+    """Tests for applying text formatting within headings.
+
+    BUG: Currently, when headings are serialized, the namedStyleType paragraph
+    style is applied AFTER text styles. This causes the heading's default text
+    style to overwrite any inline formatting (font, color, etc.).
+
+    The fix is to apply namedStyleType BEFORE child text styles in the request
+    list, so inline formatting can override the heading defaults.
+    """
+
+    def test_heading_with_bold_generates_both_styles(self):
+        """Heading with bold text should generate both heading and bold style requests."""
+        node = HeadingNode(
+            level=1,
+            anchor_id=None,
+            content=[TextNode("Normal "), BoldNode(content=[TextNode("Bold")])]
+        )
+        result = serialize_node(node, 1, {}, [])
+
+        assert result is not None
+        text, styles, preserved = result
+        assert text == "Normal Bold\n"
+
+        # Should have both paragraph style (heading) and text style (bold)
+        para_styles = [s for s in styles if "updateParagraphStyle" in s]
+        text_styles = [s for s in styles if "updateTextStyle" in s]
+        assert len(para_styles) == 1
+        assert len(text_styles) == 1
+        assert para_styles[0]["updateParagraphStyle"]["paragraphStyle"]["namedStyleType"] == "HEADING_1"
+        assert text_styles[0]["updateTextStyle"]["textStyle"]["bold"] is True
+
+    def test_heading_style_order_text_styles_last(self):
+        """Text styles should come AFTER paragraph style so they override defaults.
+
+        This test verifies the fix: updateParagraphStyle (namedStyleType) should
+        appear BEFORE updateTextStyle requests in the list, so that text formatting
+        can override the heading's default text style.
+        """
+        node = HeadingNode(
+            level=1,
+            anchor_id=None,
+            content=[
+                FormattingNode(
+                    properties={"font": "Roboto", "weight": "300"},
+                    content=[TextNode("Custom Font Heading")]
+                )
+            ]
+        )
+        result = serialize_node(node, 1, {}, [])
+
+        assert result is not None
+        text, styles, preserved = result
+
+        # Find indices of style requests
+        para_style_idx = None
+        text_style_idx = None
+        for i, s in enumerate(styles):
+            if "updateParagraphStyle" in s:
+                para_style_idx = i
+            if "updateTextStyle" in s:
+                text_style_idx = i
+
+        # Paragraph style should come BEFORE text style
+        assert para_style_idx is not None
+        assert text_style_idx is not None
+        assert para_style_idx < text_style_idx, (
+            f"Paragraph style at index {para_style_idx} should come before "
+            f"text style at index {text_style_idx}"
+        )
+
+    def test_heading_with_font_formatting(self):
+        """Heading with custom font should generate font style request."""
+        node = HeadingNode(
+            level=2,
+            anchor_id=None,
+            content=[
+                FormattingNode(
+                    properties={"font": "Roboto", "weight": "300"},
+                    content=[TextNode("Light Heading")]
+                )
+            ]
+        )
+        result = serialize_node(node, 1, {}, [])
+
+        assert result is not None
+        text, styles, preserved = result
+        assert text == "Light Heading\n"
+
+        # Should have text style with font
+        font_styles = [
+            s for s in styles
+            if "updateTextStyle" in s and "weightedFontFamily" in s["updateTextStyle"]["textStyle"]
+        ]
+        assert len(font_styles) == 1
+        font = font_styles[0]["updateTextStyle"]["textStyle"]["weightedFontFamily"]
+        assert font["fontFamily"] == "Roboto"
+        assert font["weight"] == 300
+
+    def test_heading_with_color(self):
+        """Heading with text color should generate color style request."""
+        node = HeadingNode(
+            level=1,
+            anchor_id=None,
+            content=[
+                FormattingNode(
+                    properties={"color": "#FF0000"},
+                    content=[TextNode("Red Heading")]
+                )
+            ]
+        )
+        result = serialize_node(node, 1, {}, [])
+
+        assert result is not None
+        text, styles, preserved = result
+
+        # Should have text style with color
+        color_styles = [
+            s for s in styles
+            if "updateTextStyle" in s and "foregroundColor" in s["updateTextStyle"]["textStyle"]
+        ]
+        assert len(color_styles) == 1
+
+
 class TestFontValidationErrors:
     """Tests for font validation error handling in imports."""
 

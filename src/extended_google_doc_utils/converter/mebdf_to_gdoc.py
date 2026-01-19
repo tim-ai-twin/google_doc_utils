@@ -448,16 +448,18 @@ def serialize_node(
 
         text += "\n"
 
-        # Add heading style request
+        # Add heading style request BEFORE text styles so inline formatting
+        # can override the heading's default text style
         heading_style = f"HEADING_{node.level}"
-        styles.append(
+        styles.insert(
+            0,
             {
                 "updateParagraphStyle": {
                     "range": {"startIndex": index, "endIndex": index + len(text)},
                     "paragraphStyle": {"namedStyleType": heading_style},
                     "fields": "namedStyleType",
                 }
-            }
+            },
         )
 
         return text, styles, preserved

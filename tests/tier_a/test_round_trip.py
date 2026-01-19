@@ -336,6 +336,139 @@ class TestRoundTripEmbeddedObjects:
         assert obj.object_type == "video"
 
 
+class TestRoundTripHeadingFormatting:
+    """Tests for heading formatting preservation through round-trip.
+
+    BUG: Currently headings lose their inline formatting (font, color, etc.)
+    when writing to Google Docs because namedStyleType overwrites text styles.
+    These tests verify that heading formatting survives MEBDF round-trip
+    (parse→serialize→parse).
+    """
+
+    def setup_method(self):
+        """Set up parser and serializer."""
+        self.parser = MebdfParser()
+        self.serializer = MebdfSerializer()
+
+    def test_heading_with_bold_round_trip(self):
+        """Heading with bold text survives MEBDF round-trip."""
+        original = "# Normal and **bold** heading"
+
+        doc = self.parser.parse(original)
+        output = self.serializer.serialize(doc)
+        doc2 = self.parser.parse(output)
+
+        # Both should have heading
+        heading1 = doc.children[0]
+        heading2 = doc2.children[0]
+        assert isinstance(heading1, HeadingNode)
+        assert isinstance(heading2, HeadingNode)
+
+        # Both should have bold node in content
+        def has_bold(content):
+            return any(isinstance(n, BoldNode) for n in content)
+
+        assert has_bold(heading1.content)
+        assert has_bold(heading2.content)
+
+    def test_heading_with_font_round_trip(self):
+        """Heading with custom font survives MEBDF round-trip."""
+        original = "# {!font:Roboto, weight:300}Light Font Heading{/!}"
+
+        doc = self.parser.parse(original)
+        output = self.serializer.serialize(doc)
+        doc2 = self.parser.parse(output)
+
+        heading1 = doc.children[0]
+        heading2 = doc2.children[0]
+        assert isinstance(heading1, HeadingNode)
+        assert isinstance(heading2, HeadingNode)
+
+        # Both should have FormattingNode with font property
+        def get_font_props(content):
+            for n in content:
+                if isinstance(n, FormattingNode):
+                    return n.properties
+            return {}
+
+        props1 = get_font_props(heading1.content)
+        props2 = get_font_props(heading2.content)
+        assert props1.get("font") == "Roboto"
+        assert props2.get("font") == "Roboto"
+        # Weight might be normalized to int
+        assert int(props1.get("weight", 0)) == 300
+        assert int(props2.get("weight", 0)) == 300
+
+    def test_heading_with_color_round_trip(self):
+        """Heading with text color survives MEBDF round-trip."""
+        original = "## {!color:#ff0000}Red Heading{/!}"
+
+        doc = self.parser.parse(original)
+        output = self.serializer.serialize(doc)
+        doc2 = self.parser.parse(output)
+
+        heading1 = doc.children[0]
+        heading2 = doc2.children[0]
+        assert isinstance(heading1, HeadingNode)
+        assert isinstance(heading2, HeadingNode)
+
+        # Both should have FormattingNode with color property
+        def has_color(content):
+            for n in content:
+                if isinstance(n, FormattingNode) and "color" in n.properties:
+                    return True
+            return False
+
+        assert has_color(heading1.content)
+        assert has_color(heading2.content)
+
+    def test_heading_with_mixed_formatting_round_trip(self):
+        """Heading with multiple formatting types survives round-trip."""
+        original = "# Normal **bold** *italic* {!underline}underlined{/!} text"
+
+        doc = self.parser.parse(original)
+        output = self.serializer.serialize(doc)
+        doc2 = self.parser.parse(output)
+
+        heading1 = doc.children[0]
+        heading2 = doc2.children[0]
+
+        def count_formatting(content):
+            bold = sum(1 for n in content if isinstance(n, BoldNode))
+            italic = sum(1 for n in content if isinstance(n, ItalicNode))
+            underline = sum(1 for n in content if isinstance(n, FormattingNode) and n.properties.get("underline"))
+            return bold, italic, underline
+
+        b1, i1, u1 = count_formatting(heading1.content)
+        b2, i2, u2 = count_formatting(heading2.content)
+
+        assert b1 == b2 == 1
+        assert i1 == i2 == 1
+        assert u1 == u2 == 1
+
+    def test_heading_anchor_with_formatting_round_trip(self):
+        """Heading with both anchor and formatting survives round-trip."""
+        original = "# {^ h.test}**Bold Anchor Heading**"
+
+        doc = self.parser.parse(original)
+        output = self.serializer.serialize(doc)
+        doc2 = self.parser.parse(output)
+
+        heading1 = doc.children[0]
+        heading2 = doc2.children[0]
+
+        # Both should preserve anchor
+        assert heading1.anchor_id == "h.test"
+        assert heading2.anchor_id == "h.test"
+
+        # Both should have bold content
+        def has_bold(content):
+            return any(isinstance(n, BoldNode) for n in content)
+
+        assert has_bold(heading1.content)
+        assert has_bold(heading2.content)
+
+
 class TestRoundTripComplexDocument:
     """Tests for complex document round-trip."""
 

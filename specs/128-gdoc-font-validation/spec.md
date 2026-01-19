@@ -84,6 +84,45 @@ The MCP tool descriptions include clear documentation about font formatting synt
 - What happens when the font name has different casing than expected (e.g., "roboto" vs "Roboto")?
 - How does the system handle the "mono" shorthand vs explicit font specification?
 
+---
+
+### User Story 5 - Heading Text Formatting (Priority: P1) [FIXED]
+
+An LLM writes content to a Google Doc where headings contain custom text formatting (fonts, colors, bold/italic). The formatting should be preserved when the content is imported.
+
+**Why this priority**: Headings often have custom styling distinct from the document's default heading style.
+
+**Bug Status**: FIXED
+
+**Root Cause Analysis**:
+
+When headings are serialized to Google Docs API requests in `mebdf_to_gdoc.py:434-463`, the `updateParagraphStyle` request (which sets `namedStyleType` to `HEADING_1`, etc.) is appended to the styles list AFTER child text style requests. When Google Docs processes these requests:
+
+1. Text styles (font, color, bold) are applied first
+2. Then `namedStyleType` is applied, which includes the heading's default text style
+3. The heading's default text style OVERWRITES the previously applied inline formatting
+
+**Fix Required**: In `HeadingNode` serialization, the `updateParagraphStyle` request must be inserted BEFORE the child text style requests, not after. This ensures:
+1. Heading paragraph style (namedStyleType) is applied first
+2. Inline text formatting (font, color, etc.) is applied second, overriding the heading defaults
+
+**Location**: `src/extended_google_doc_utils/converter/mebdf_to_gdoc.py`, lines 434-463, `HeadingNode` branch in `serialize_node()`
+
+**Fix Applied**: Changed `styles.append(...)` to `styles.insert(0, ...)` for the paragraph style request, ensuring it comes before any child text styles.
+
+**Acceptance Scenarios**:
+
+1. **Given** an LLM specifies a heading with custom font, **When** the content is imported, **Then** the heading displays in the specified font (not the heading's default font).
+
+2. **Given** an LLM specifies a heading with colored text, **When** the content is imported, **Then** the heading displays in the specified color.
+
+3. **Given** an LLM specifies a heading with bold/italic text within it, **When** the content is imported, **Then** the bold/italic formatting is preserved.
+
+**Test Coverage Added**:
+- `tests/tier_a/test_gdoc_to_mebdf.py::TestHeadingFormatting` - Reading formatting from headings (PASSING)
+- `tests/tier_a/test_mebdf_to_gdoc.py::TestHeadingTextFormatting` - Writing formatting to headings (includes XFAIL test documenting bug)
+- `tests/tier_a/test_round_trip.py::TestRoundTripHeadingFormatting` - MEBDF round-trip for heading formatting (PASSING)
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
