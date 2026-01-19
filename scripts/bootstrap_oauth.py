@@ -7,21 +7,31 @@ to obtain and save credentials for local development and testing.
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
 # Add src to path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+try:
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
 
-from extended_google_doc_utils.auth.credential_manager import (
-    CredentialManager,
-    CredentialSource,
-    OAuthCredentials,
-)
-from extended_google_doc_utils.auth.oauth_flow import OAuthFlow
+    from extended_google_doc_utils.auth.credential_manager import (
+        CredentialManager,
+        CredentialSource,
+        OAuthCredentials,
+    )
+    from extended_google_doc_utils.auth.oauth_flow import OAuthFlow
+except ModuleNotFoundError as e:
+    print(f"Error: Missing dependency - {e.name}")
+    print("\nPlease run this script using uv:")
+    print("  uv run scripts/bootstrap_oauth.py")
+    print("\nOr activate the virtual environment first:")
+    print("  source .venv/bin/activate")
+    print("  ./scripts/bootstrap_oauth.py")
+    sys.exit(1)
 
 
 def print_welcome():
@@ -208,6 +218,56 @@ export GOOGLE_OAUTH_REFRESH_TOKEN="{refresh_token}"
 """.strip()
 
 
+def update_github_secrets(client_id: str, client_secret: str, credentials) -> bool:
+    """Update GitHub repository secrets with the new credentials.
+
+    Args:
+        client_id: OAuth client ID
+        client_secret: OAuth client secret
+        credentials: Google OAuth credentials object
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Check if gh CLI is available and authenticated
+        result = subprocess.run(
+            ["gh", "auth", "status"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print("Error: GitHub CLI is not authenticated.")
+            print("Run 'gh auth login' first.")
+            return False
+
+        # Set each secret
+        secrets = [
+            ("GOOGLE_OAUTH_CLIENT_ID", client_id),
+            ("GOOGLE_OAUTH_CLIENT_SECRET", client_secret),
+            ("GOOGLE_OAUTH_REFRESH_TOKEN", credentials.refresh_token or ""),
+        ]
+
+        for secret_name, secret_value in secrets:
+            result = subprocess.run(
+                ["gh", "secret", "set", secret_name],
+                input=secret_value,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                print(f"Error setting {secret_name}: {result.stderr}")
+                return False
+            print(f"  ✓ Updated {secret_name}")
+
+        return True
+
+    except FileNotFoundError:
+        print("Error: GitHub CLI (gh) is not installed.")
+        print("Install it from: https://cli.github.com/")
+        return False
+
+
 def main():
     """Run the OAuth bootstrap process."""
     parser = argparse.ArgumentParser(
@@ -298,6 +358,15 @@ def main():
         print("\nCopy these to your CI/CD environment or .env file:\n")
         print(format_env_vars(client_id, client_secret, credentials))
         print()
+
+        # Offer to update GitHub secrets
+        update_gh = input("Update GitHub repository secrets? [y/N]: ").strip().lower()
+        if update_gh == "y":
+            print("\nUpdating GitHub secrets...")
+            if update_github_secrets(client_id, client_secret, credentials):
+                print("\n✓ GitHub secrets updated successfully.")
+            else:
+                print("\n✗ Failed to update GitHub secrets.")
     else:
         print("\n" + "=" * 70)
         print("SETUP COMPLETE")
@@ -312,6 +381,15 @@ def main():
         print("\nCopy these to your CI/CD environment or .env file:\n")
         print(format_env_vars(client_id, client_secret, credentials))
         print()
+
+        # Offer to update GitHub secrets
+        update_gh = input("Update GitHub repository secrets? [y/N]: ").strip().lower()
+        if update_gh == "y":
+            print("\nUpdating GitHub secrets...")
+            if update_github_secrets(client_id, client_secret, credentials):
+                print("\n✓ GitHub secrets updated successfully.")
+            else:
+                print("\n✗ Failed to update GitHub secrets.")
 
 
 if __name__ == "__main__":
