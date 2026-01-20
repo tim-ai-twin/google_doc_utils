@@ -119,6 +119,20 @@ A developer wants to verify that reading styles from a document and applying the
 - What happens when a paragraph has partial overrides (e.g., font is overridden but size uses the style definition)? Answer: Capture the complete effective/resolved formatting - merge style definition with overrides to get what the user sees.
 - How do multi-tab documents work? Answer: Users can specify a `tab_id` to target a specific tab. If no tab_id is provided, the first/default tab is used. This is consistent with all other MCP tools in the system.
 
+## Google Docs Style Hierarchy
+
+Google Docs uses a 3-level style inheritance model that the API exposes differently than what users see visually. Understanding this is critical for correct style extraction.
+
+1. **Named Style Definitions** (`namedStyles.styles[]`): Template-level defaults for HEADING_1, NORMAL_TEXT, etc. Contains complete style properties. When a user clicks "Update 'Heading 1' to match", this is what gets modified.
+
+2. **Paragraph Style** (`paragraph.paragraphStyle`): Per-paragraph settings. The API only returns **overrides** from the named style, not the full resolved style. An empty object means "inherit everything from the named style."
+
+3. **Text Run Style** (`textRun.textStyle`): Inline formatting on specific text within a paragraph. Again, the API only returns **overrides**, not resolved values. Selecting text and changing its color creates an override here.
+
+To get the "effective style" (what the user sees), you must merge all three levels: Named Definition + Paragraph Overrides + Text Run Overrides. The API does not provide a pre-merged "resolved" style—this must be computed by the client. This feature handles this merging automatically when reading styles.
+
+---
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

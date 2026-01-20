@@ -355,36 +355,81 @@ def find_paragraphs_by_style_type(
 # =============================================================================
 
 
+def _merge_text_styles(
+    base: TextStyleProperties, override: TextStyleProperties
+) -> TextStyleProperties:
+    """Merge two TextStyleProperties, with override taking precedence.
+
+    For each property, if the override has a non-None value, use it;
+    otherwise use the base value.
+    """
+    return TextStyleProperties(
+        font_family=override.font_family if override.font_family is not None else base.font_family,
+        font_size_pt=override.font_size_pt if override.font_size_pt is not None else base.font_size_pt,
+        font_weight=override.font_weight if override.font_weight is not None else base.font_weight,
+        text_color=override.text_color if override.text_color is not None else base.text_color,
+        highlight_color=override.highlight_color if override.highlight_color is not None else base.highlight_color,
+        bold=override.bold if override.bold is not None else base.bold,
+        italic=override.italic if override.italic is not None else base.italic,
+        underline=override.underline if override.underline is not None else base.underline,
+    )
+
+
+def _merge_paragraph_styles(
+    base: ParagraphStyleProperties, override: ParagraphStyleProperties
+) -> ParagraphStyleProperties:
+    """Merge two ParagraphStyleProperties, with override taking precedence."""
+    return ParagraphStyleProperties(
+        alignment=override.alignment if override.alignment is not None else base.alignment,
+        line_spacing=override.line_spacing if override.line_spacing is not None else base.line_spacing,
+        space_before_pt=override.space_before_pt if override.space_before_pt is not None else base.space_before_pt,
+        space_after_pt=override.space_after_pt if override.space_after_pt is not None else base.space_after_pt,
+        indent_start_pt=override.indent_start_pt if override.indent_start_pt is not None else base.indent_start_pt,
+        indent_end_pt=override.indent_end_pt if override.indent_end_pt is not None else base.indent_end_pt,
+        first_line_indent_pt=override.first_line_indent_pt if override.first_line_indent_pt is not None else base.first_line_indent_pt,
+    )
+
+
 def extract_effective_style_from_paragraph(
     paragraph: dict,
+    style_definition: tuple[TextStyleProperties, ParagraphStyleProperties] | None = None,
 ) -> tuple[TextStyleProperties, ParagraphStyleProperties]:
     """Extract effective text and paragraph style from a paragraph element.
 
-    This captures the actual formatting visible to the user, including
-    any inline overrides that differ from the named style definition.
+    This captures the actual formatting visible to the user by merging the
+    named style definition with any inline overrides.
 
     Args:
         paragraph: A paragraph element from document body content.
+        style_definition: Optional (text_style, para_style) tuple from named style.
+            If provided, inline overrides are merged on top of this base.
 
     Returns:
         Tuple of (text_style, paragraph_style) representing effective formatting.
     """
-    # Extract paragraph style (already resolved by API)
+    # Extract paragraph style from the paragraph element
     para_style_dict = paragraph.get("paragraphStyle", {})
-    para_style = _extract_paragraph_style_properties(para_style_dict)
+    para_style_override = _extract_paragraph_style_properties(para_style_dict)
 
-    # For text style, we need to look at the first text run
-    # The API returns resolved styles, so we use the first run's textStyle
+    # For text style, look at the first text run
     elements = paragraph.get("elements", [])
-
-    text_style = TextStyleProperties()  # Default empty
+    text_style_override = TextStyleProperties()  # Default empty
 
     for element in elements:
         text_run = element.get("textRun")
         if text_run:
             text_style_dict = text_run.get("textStyle", {})
-            text_style = _extract_text_style_properties(text_style_dict)
+            text_style_override = _extract_text_style_properties(text_style_dict)
             break  # Use first text run's style
+
+    # Merge with style definition if provided
+    if style_definition:
+        base_text, base_para = style_definition
+        text_style = _merge_text_styles(base_text, text_style_override)
+        para_style = _merge_paragraph_styles(base_para, para_style_override)
+    else:
+        text_style = text_style_override
+        para_style = para_style_override
 
     return text_style, para_style
 
@@ -442,16 +487,19 @@ def read_document_styles(
     for style_type in NamedStyleType:
         paragraphs = paragraphs_by_type.get(style_type, [])
 
+        # Get the style definition for this type (if available)
+        style_def = style_definitions.get(style_type)
+
         if paragraphs:
-            # Use first paragraph's effective style (per edge case spec)
+            # Use first paragraph's effective style, merged with style definition
             text_style, para_style = extract_effective_style_from_paragraph(
-                paragraphs[0]
+                paragraphs[0], style_definition=style_def
             )
             source = StyleSource.PARAGRAPH_SAMPLE
         else:
             # Fall back to style definition
-            if style_type in style_definitions:
-                text_style, para_style = style_definitions[style_type]
+            if style_def:
+                text_style, para_style = style_def
             else:
                 # No definition found, use empty defaults
                 text_style = TextStyleProperties()

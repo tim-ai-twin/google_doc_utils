@@ -7,6 +7,8 @@ Tests: T009-T013
 import pytest
 
 from extended_google_doc_utils.converter.style_reader import (
+    _merge_paragraph_styles,
+    _merge_text_styles,
     extract_document_properties,
     extract_effective_style_from_paragraph,
     extract_named_style_definitions,
@@ -15,7 +17,9 @@ from extended_google_doc_utils.converter.style_reader import (
 )
 from extended_google_doc_utils.converter.types import (
     NamedStyleType,
+    ParagraphStyleProperties,
     RGBColor,
+    TextStyleProperties,
 )
 
 
@@ -407,3 +411,316 @@ class TestFindParagraphsByStyleType:
         result = find_paragraphs_by_style_type(body)
 
         assert len(result[NamedStyleType.NORMAL_TEXT]) == 1
+
+
+# =============================================================================
+# Tests for style merge functions
+# =============================================================================
+
+
+class TestMergeTextStyles:
+    """Tests for _merge_text_styles helper function."""
+
+    def test_override_takes_precedence(self):
+        """Override values replace base values."""
+        base = TextStyleProperties(
+            font_family="Arial",
+            font_size_pt=12.0,
+            bold=False,
+        )
+        override = TextStyleProperties(
+            font_family="Roboto",
+            font_size_pt=16.0,
+        )
+        result = _merge_text_styles(base, override)
+
+        assert result.font_family == "Roboto"
+        assert result.font_size_pt == 16.0
+        assert result.bold is False  # From base
+
+    def test_base_used_when_override_is_none(self):
+        """Base values used when override has None."""
+        base = TextStyleProperties(
+            font_family="Arial",
+            font_size_pt=14.0,
+            text_color=RGBColor(red=1.0, green=0.0, blue=0.0),
+        )
+        override = TextStyleProperties(
+            font_family=None,
+            font_size_pt=None,
+        )
+        result = _merge_text_styles(base, override)
+
+        assert result.font_family == "Arial"
+        assert result.font_size_pt == 14.0
+        assert result.text_color == RGBColor(red=1.0, green=0.0, blue=0.0)
+
+    def test_all_properties_merged(self):
+        """All 8 text style properties are merged correctly."""
+        base = TextStyleProperties(
+            font_family="Arial",
+            font_size_pt=12.0,
+            font_weight=400,
+            text_color=RGBColor(red=0.0, green=0.0, blue=0.0),
+            highlight_color=RGBColor(red=1.0, green=1.0, blue=0.0),
+            bold=True,
+            italic=False,
+            underline=False,
+        )
+        override = TextStyleProperties(
+            font_family="Georgia",
+            font_weight=700,
+            italic=True,
+        )
+        result = _merge_text_styles(base, override)
+
+        # Overridden
+        assert result.font_family == "Georgia"
+        assert result.font_weight == 700
+        assert result.italic is True
+        # From base
+        assert result.font_size_pt == 12.0
+        assert result.text_color == RGBColor(red=0.0, green=0.0, blue=0.0)
+        assert result.highlight_color == RGBColor(red=1.0, green=1.0, blue=0.0)
+        assert result.bold is True
+        assert result.underline is False
+
+    def test_empty_base_returns_override(self):
+        """Empty base with values in override returns override values."""
+        base = TextStyleProperties()
+        override = TextStyleProperties(
+            font_family="Roboto",
+            font_size_pt=18.0,
+        )
+        result = _merge_text_styles(base, override)
+
+        assert result.font_family == "Roboto"
+        assert result.font_size_pt == 18.0
+
+    def test_empty_override_returns_base(self):
+        """Empty override returns base values."""
+        base = TextStyleProperties(
+            font_family="Arial",
+            bold=True,
+        )
+        override = TextStyleProperties()
+        result = _merge_text_styles(base, override)
+
+        assert result.font_family == "Arial"
+        assert result.bold is True
+
+
+class TestMergeParagraphStyles:
+    """Tests for _merge_paragraph_styles helper function."""
+
+    def test_override_takes_precedence(self):
+        """Override values replace base values."""
+        base = ParagraphStyleProperties(
+            alignment="START",
+            line_spacing=1.15,
+            space_before_pt=12.0,
+        )
+        override = ParagraphStyleProperties(
+            alignment="CENTER",
+            line_spacing=1.5,
+        )
+        result = _merge_paragraph_styles(base, override)
+
+        assert result.alignment == "CENTER"
+        assert result.line_spacing == 1.5
+        assert result.space_before_pt == 12.0  # From base
+
+    def test_base_used_when_override_is_none(self):
+        """Base values used when override has None."""
+        base = ParagraphStyleProperties(
+            alignment="JUSTIFIED",
+            space_after_pt=6.0,
+            indent_start_pt=36.0,
+        )
+        override = ParagraphStyleProperties()
+        result = _merge_paragraph_styles(base, override)
+
+        assert result.alignment == "JUSTIFIED"
+        assert result.space_after_pt == 6.0
+        assert result.indent_start_pt == 36.0
+
+    def test_all_properties_merged(self):
+        """All 7 paragraph style properties are merged correctly."""
+        base = ParagraphStyleProperties(
+            alignment="START",
+            line_spacing=1.0,
+            space_before_pt=10.0,
+            space_after_pt=5.0,
+            indent_start_pt=18.0,
+            indent_end_pt=18.0,
+            first_line_indent_pt=36.0,
+        )
+        override = ParagraphStyleProperties(
+            alignment="END",
+            space_before_pt=20.0,
+            first_line_indent_pt=0.0,
+        )
+        result = _merge_paragraph_styles(base, override)
+
+        # Overridden
+        assert result.alignment == "END"
+        assert result.space_before_pt == 20.0
+        assert result.first_line_indent_pt == 0.0
+        # From base
+        assert result.line_spacing == 1.0
+        assert result.space_after_pt == 5.0
+        assert result.indent_start_pt == 18.0
+        assert result.indent_end_pt == 18.0
+
+
+# =============================================================================
+# Tests for effective style extraction with style_definition parameter
+# =============================================================================
+
+
+class TestExtractEffectiveStyleWithDefinition:
+    """Tests for extract_effective_style_from_paragraph with style_definition."""
+
+    def test_merges_definition_with_empty_overrides(self):
+        """When paragraph has no inline overrides, returns style definition."""
+        style_definition = (
+            TextStyleProperties(
+                font_family="Playfair Display",
+                font_size_pt=16.0,
+                bold=True,
+                text_color=RGBColor(red=0.97, green=0.36, blue=0.36),
+            ),
+            ParagraphStyleProperties(
+                alignment="START",
+                line_spacing=1.15,
+            ),
+        )
+        # Paragraph with empty textStyle (inherits from named style)
+        paragraph = {
+            "paragraphStyle": {"namedStyleType": "HEADING_1"},
+            "elements": [{"textRun": {"content": "Heading", "textStyle": {}}}],
+        }
+
+        text_style, para_style = extract_effective_style_from_paragraph(
+            paragraph, style_definition=style_definition
+        )
+
+        # Should get values from style definition
+        assert text_style.font_family == "Playfair Display"
+        assert text_style.font_size_pt == 16.0
+        assert text_style.bold is True
+        assert text_style.text_color == RGBColor(red=0.97, green=0.36, blue=0.36)
+        assert para_style.alignment == "START"
+        assert para_style.line_spacing == 1.15
+
+    def test_merges_definition_with_partial_overrides(self):
+        """Inline overrides are merged on top of style definition."""
+        style_definition = (
+            TextStyleProperties(
+                font_family="Arial",
+                font_size_pt=24.0,
+                bold=True,
+            ),
+            ParagraphStyleProperties(
+                alignment="START",
+                space_before_pt=20.0,
+            ),
+        )
+        # Paragraph with partial overrides (font_family and italic)
+        paragraph = {
+            "paragraphStyle": {
+                "namedStyleType": "HEADING_1",
+                "alignment": "CENTER",  # Override alignment
+            },
+            "elements": [
+                {
+                    "textRun": {
+                        "content": "Custom",
+                        "textStyle": {
+                            "weightedFontFamily": {"fontFamily": "Georgia"},
+                            "italic": True,
+                        },
+                    }
+                }
+            ],
+        }
+
+        text_style, para_style = extract_effective_style_from_paragraph(
+            paragraph, style_definition=style_definition
+        )
+
+        # Overridden values
+        assert text_style.font_family == "Georgia"
+        assert text_style.italic is True
+        assert para_style.alignment == "CENTER"
+        # From definition
+        assert text_style.font_size_pt == 24.0
+        assert text_style.bold is True
+        assert para_style.space_before_pt == 20.0
+
+    def test_full_override_replaces_definition(self):
+        """Complete inline overrides replace style definition entirely."""
+        style_definition = (
+            TextStyleProperties(
+                font_family="Arial",
+                font_size_pt=12.0,
+            ),
+            ParagraphStyleProperties(
+                alignment="START",
+            ),
+        )
+        # Paragraph with complete text style overrides
+        paragraph = {
+            "paragraphStyle": {"alignment": "END"},
+            "elements": [
+                {
+                    "textRun": {
+                        "content": "Text",
+                        "textStyle": {
+                            "weightedFontFamily": {"fontFamily": "Roboto", "weight": 700},
+                            "fontSize": {"magnitude": 18, "unit": "PT"},
+                            "bold": True,
+                            "foregroundColor": {
+                                "color": {"rgbColor": {"red": 0.0, "green": 0.5, "blue": 1.0}}
+                            },
+                        },
+                    }
+                }
+            ],
+        }
+
+        text_style, para_style = extract_effective_style_from_paragraph(
+            paragraph, style_definition=style_definition
+        )
+
+        # All overridden
+        assert text_style.font_family == "Roboto"
+        assert text_style.font_weight == 700
+        assert text_style.font_size_pt == 18.0
+        assert text_style.bold is True
+        assert text_style.text_color == RGBColor(red=0.0, green=0.5, blue=1.0)
+        assert para_style.alignment == "END"
+
+    def test_without_definition_returns_inline_only(self):
+        """Without style_definition, returns only inline values."""
+        paragraph = {
+            "paragraphStyle": {"alignment": "CENTER"},
+            "elements": [
+                {
+                    "textRun": {
+                        "content": "Text",
+                        "textStyle": {
+                            "weightedFontFamily": {"fontFamily": "Verdana"},
+                        },
+                    }
+                }
+            ],
+        }
+
+        text_style, para_style = extract_effective_style_from_paragraph(
+            paragraph, style_definition=None
+        )
+
+        assert text_style.font_family == "Verdana"
+        assert text_style.font_size_pt is None  # No definition to fall back to
+        assert para_style.alignment == "CENTER"

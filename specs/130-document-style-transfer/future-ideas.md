@@ -2,6 +2,29 @@
 
 Ideas for future improvements that are not critical for initial release.
 
+## Style Transfer Enhancements
+
+### Table Cell Styles
+Tables have their own style inheritance that we don't currently handle:
+- Cell background colors
+- Cell border styles
+- Cell padding
+- Text alignment within cells
+- Row/column header formatting
+
+Would require traversing table elements and applying styles per-cell.
+
+### List Styles
+Bullet and numbered list formatting is separate from paragraph styles:
+- Bullet characters/glyphs
+- Number formats (1, a, i, etc.)
+- Indentation levels
+- Glyph colors and sizes
+
+Would require handling `bullet` properties in paragraph elements and potentially `lists` in document structure.
+
+---
+
 ## Testing Improvements
 
 ### Multi-Tab Test Document

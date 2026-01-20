@@ -10,6 +10,8 @@ Tests cover:
 
 
 from extended_google_doc_utils.converter.gdoc_to_mebdf import (
+    _extract_named_text_styles,
+    _merge_text_style_dicts,
     convert_elements,
     convert_paragraph_content,
     convert_text_with_style,
@@ -621,3 +623,273 @@ class TestExportBody:
         result = export_body(document, body, "")
 
         assert "**bold**" in result.content
+
+
+# =============================================================================
+# Tests for named style extraction and merging
+# =============================================================================
+
+
+class TestExtractNamedTextStyles:
+    """Tests for _extract_named_text_styles helper function."""
+
+    def test_empty_named_styles(self):
+        """Returns empty dict for empty input."""
+        result = _extract_named_text_styles({})
+        assert result == {}
+
+    def test_extracts_heading_styles(self):
+        """Extracts text styles from named style definitions."""
+        named_styles = {
+            "styles": [
+                {
+                    "namedStyleType": "HEADING_1",
+                    "textStyle": {
+                        "weightedFontFamily": {"fontFamily": "Roboto", "weight": 700},
+                        "fontSize": {"magnitude": 24, "unit": "PT"},
+                        "foregroundColor": {
+                            "color": {"rgbColor": {"red": 0.2, "green": 0.4, "blue": 0.8}}
+                        },
+                    },
+                },
+                {
+                    "namedStyleType": "NORMAL_TEXT",
+                    "textStyle": {
+                        "weightedFontFamily": {"fontFamily": "Arial"},
+                    },
+                },
+            ]
+        }
+
+        result = _extract_named_text_styles(named_styles)
+
+        assert "HEADING_1" in result
+        assert "NORMAL_TEXT" in result
+        assert result["HEADING_1"]["weightedFontFamily"]["fontFamily"] == "Roboto"
+        assert result["HEADING_1"]["fontSize"]["magnitude"] == 24
+
+    def test_handles_missing_text_style(self):
+        """Returns empty dict for style without textStyle."""
+        named_styles = {
+            "styles": [
+                {
+                    "namedStyleType": "HEADING_2",
+                    # No textStyle key
+                }
+            ]
+        }
+
+        result = _extract_named_text_styles(named_styles)
+
+        assert "HEADING_2" in result
+        assert result["HEADING_2"] == {}
+
+
+class TestMergeTextStyleDicts:
+    """Tests for _merge_text_style_dicts helper function."""
+
+    def test_override_takes_precedence(self):
+        """Override values replace base values."""
+        base = {
+            "weightedFontFamily": {"fontFamily": "Arial", "weight": 400},
+            "fontSize": {"magnitude": 12, "unit": "PT"},
+        }
+        override = {
+            "weightedFontFamily": {"fontFamily": "Roboto"},
+        }
+
+        result = _merge_text_style_dicts(base, override)
+
+        # Font family merged with override taking precedence
+        assert result["weightedFontFamily"]["fontFamily"] == "Roboto"
+        # Weight preserved from base
+        assert result["weightedFontFamily"]["weight"] == 400
+        # Size from base
+        assert result["fontSize"]["magnitude"] == 12
+
+    def test_base_used_when_override_empty(self):
+        """Base values used when override is empty."""
+        base = {
+            "bold": True,
+            "fontSize": {"magnitude": 16, "unit": "PT"},
+        }
+        override = {}
+
+        result = _merge_text_style_dicts(base, override)
+
+        assert result["bold"] is True
+        assert result["fontSize"]["magnitude"] == 16
+
+    def test_none_values_ignored(self):
+        """None values in override don't replace base values."""
+        base = {
+            "bold": True,
+        }
+        override = {
+            "bold": None,
+            "italic": True,
+        }
+
+        result = _merge_text_style_dicts(base, override)
+
+        assert result["bold"] is True  # Not overwritten by None
+        assert result["italic"] is True
+
+    def test_full_merge(self):
+        """Complete merge of multiple properties."""
+        base = {
+            "weightedFontFamily": {"fontFamily": "Playfair Display", "weight": 700},
+            "fontSize": {"magnitude": 16, "unit": "PT"},
+            "foregroundColor": {
+                "color": {"rgbColor": {"red": 0.97, "green": 0.36, "blue": 0.36}}
+            },
+            "bold": True,
+        }
+        override = {
+            "italic": True,
+        }
+
+        result = _merge_text_style_dicts(base, override)
+
+        # All base values preserved
+        assert result["weightedFontFamily"]["fontFamily"] == "Playfair Display"
+        assert result["fontSize"]["magnitude"] == 16
+        assert result["foregroundColor"]["color"]["rgbColor"]["red"] == 0.97
+        assert result["bold"] is True
+        # Override added
+        assert result["italic"] is True
+
+
+class TestNamedStyleMergeInExport:
+    """Tests verifying that named style definitions are merged during export."""
+
+    def test_heading_inherits_from_named_style(self):
+        """When textRun.textStyle is empty, formatting comes from named style."""
+        # Named style defines the formatting
+        named_styles = {
+            "styles": [
+                {
+                    "namedStyleType": "HEADING_1",
+                    "textStyle": {
+                        "weightedFontFamily": {"fontFamily": "Playfair Display", "weight": 700},
+                        "foregroundColor": {
+                            "color": {"rgbColor": {"red": 0.97, "green": 0.36, "blue": 0.36}}
+                        },
+                    },
+                }
+            ]
+        }
+        document = {"namedStyles": named_styles}
+
+        # Paragraph has empty textStyle (inherits from named style)
+        body = {
+            "content": [
+                {
+                    "paragraph": {
+                        "paragraphStyle": {
+                            "namedStyleType": "HEADING_1",
+                            "headingId": "h.test",
+                        },
+                        "elements": [
+                            {
+                                "textRun": {
+                                    "content": "Styled Heading\n",
+                                    "textStyle": {},  # Empty - inherits from named style
+                                }
+                            }
+                        ],
+                    },
+                    "startIndex": 1,
+                }
+            ]
+        }
+
+        result = export_body(document, body, "")
+
+        # Should include font formatting from named style
+        assert "font:Playfair Display" in result.content
+        # Should include color formatting from named style
+        assert "color:#f" in result.content  # Color starts with #f (red-ish)
+
+    def test_partial_override_merges_with_named_style(self):
+        """Inline overrides are merged on top of named style definition."""
+        named_styles = {
+            "styles": [
+                {
+                    "namedStyleType": "HEADING_1",
+                    "textStyle": {
+                        "weightedFontFamily": {"fontFamily": "Roboto", "weight": 400},
+                        "fontSize": {"magnitude": 24, "unit": "PT"},
+                    },
+                }
+            ]
+        }
+        document = {"namedStyles": named_styles}
+
+        # Paragraph overrides only italic (font comes from named style)
+        body = {
+            "content": [
+                {
+                    "paragraph": {
+                        "paragraphStyle": {
+                            "namedStyleType": "HEADING_1",
+                            "headingId": "h.test2",
+                        },
+                        "elements": [
+                            {
+                                "textRun": {
+                                    "content": "Partial Override\n",
+                                    "textStyle": {"italic": True},  # Only italic
+                                }
+                            }
+                        ],
+                    },
+                    "startIndex": 1,
+                }
+            ]
+        }
+
+        result = export_body(document, body, "")
+
+        # Should have font from named style
+        assert "font:Roboto" in result.content
+        # Should have italic from override
+        assert "*" in result.content  # Italic marker
+
+    def test_normal_text_inherits_from_named_style(self):
+        """Normal text paragraphs also inherit from named styles."""
+        named_styles = {
+            "styles": [
+                {
+                    "namedStyleType": "NORMAL_TEXT",
+                    "textStyle": {
+                        "weightedFontFamily": {"fontFamily": "Georgia"},
+                    },
+                }
+            ]
+        }
+        document = {"namedStyles": named_styles}
+
+        body = {
+            "content": [
+                {
+                    "paragraph": {
+                        "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        "elements": [
+                            {
+                                "textRun": {
+                                    "content": "Body text\n",
+                                    "textStyle": {},  # Empty - inherits
+                                }
+                            }
+                        ],
+                    },
+                    "startIndex": 1,
+                }
+            ]
+        }
+
+        result = export_body(document, body, "")
+
+        # Should include font from named style
+        assert "font:Georgia" in result.content

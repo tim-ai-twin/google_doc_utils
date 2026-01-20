@@ -32,6 +32,7 @@ from extended_google_doc_utils.converter.mebdf_serializer import MebdfSerializer
 from extended_google_doc_utils.converter.tab_utils import (
     get_inline_objects,
     get_positioned_objects,
+    get_tab_named_styles,
 )
 from extended_google_doc_utils.converter.types import (
     Anchor,
@@ -41,6 +42,40 @@ from extended_google_doc_utils.converter.types import (
     ExportResult,
     Section,
 )
+
+
+def _extract_named_text_styles(named_styles: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Extract text styles from named style definitions.
+
+    Returns a dict mapping style type name (e.g., "HEADING_1") to its textStyle dict.
+    This is used to merge with inline text styles during export.
+    """
+    result: dict[str, dict[str, Any]] = {}
+    for style in named_styles.get("styles", []):
+        style_type = style.get("namedStyleType", "")
+        if style_type:
+            result[style_type] = style.get("textStyle", {})
+    return result
+
+
+def _merge_text_style_dicts(
+    base: dict[str, Any], override: dict[str, Any]
+) -> dict[str, Any]:
+    """Merge two textStyle dicts, with override taking precedence.
+
+    For nested dicts like weightedFontFamily, performs shallow merge.
+    """
+    merged = dict(base)  # Start with base
+
+    for key, value in override.items():
+        if value is not None and value != {}:
+            if key == "weightedFontFamily" and key in merged:
+                # Merge nested font family dict
+                merged[key] = {**merged.get(key, {}), **value}
+            else:
+                merged[key] = value
+
+    return merged
 
 
 def export_body(
@@ -59,9 +94,13 @@ def export_body(
     inline_objects = get_inline_objects(document, tab_id)
     positioned_objects = get_positioned_objects(document, tab_id)
 
+    # Extract named style text styles for merging
+    named_styles = get_tab_named_styles(document, tab_id)
+    named_text_styles = _extract_named_text_styles(named_styles)
+
     content_elements = body.get("content", [])
     ast, anchors, embedded, warnings = convert_elements(
-        content_elements, inline_objects, positioned_objects
+        content_elements, inline_objects, positioned_objects, named_text_styles
     )
 
     serializer = MebdfSerializer()
@@ -95,6 +134,10 @@ def export_section(
     inline_objects = get_inline_objects(document, tab_id)
     positioned_objects = get_positioned_objects(document, tab_id)
 
+    # Extract named style text styles for merging
+    named_styles = get_tab_named_styles(document, tab_id)
+    named_text_styles = _extract_named_text_styles(named_styles)
+
     # Filter elements within section boundaries
     content_elements = body.get("content", [])
     section_elements = [
@@ -105,7 +148,7 @@ def export_section(
     ]
 
     ast, anchors, embedded, warnings = convert_elements(
-        section_elements, inline_objects, positioned_objects
+        section_elements, inline_objects, positioned_objects, named_text_styles
     )
 
     serializer = MebdfSerializer()
@@ -123,6 +166,7 @@ def convert_elements(
     elements: list[dict[str, Any]],
     inline_objects: dict[str, Any],
     positioned_objects: dict[str, Any],
+    named_text_styles: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[DocumentNode, list[Anchor], list[EmbeddedObject], list[str]]:
     """Convert document elements to AST.
 
@@ -130,10 +174,13 @@ def convert_elements(
         elements: List of document content elements.
         inline_objects: Map of inline object IDs to data.
         positioned_objects: Map of positioned object IDs to data.
+        named_text_styles: Map of style type name to textStyle dict for merging.
 
     Returns:
         Tuple of (DocumentNode, anchors, embedded_objects, warnings).
     """
+    if named_text_styles is None:
+        named_text_styles = {}
     children: list = []
     anchors: list[Anchor] = []
     embedded: list[EmbeddedObject] = []
@@ -152,9 +199,10 @@ def convert_elements(
             if named_style in HEADING_STYLES:
                 level = HEADING_STYLES[named_style]
                 heading_id = style.get("headingId")
+                base_text_style = named_text_styles.get(named_style, {})
                 content, para_anchors, para_embedded, para_warnings = (
                     convert_paragraph_content(
-                        paragraph, inline_objects, positioned_objects
+                        paragraph, inline_objects, positioned_objects, base_text_style
                     )
                 )
 
@@ -178,7 +226,7 @@ def convert_elements(
             elif "bullet" in paragraph:
                 # Collect consecutive list items
                 list_items, list_end_idx = collect_list_items(
-                    elements, i, inline_objects, positioned_objects
+                    elements, i, inline_objects, positioned_objects, named_text_styles
                 )
                 # Determine if ordered
                 bullet = paragraph.get("bullet", {})
@@ -201,9 +249,10 @@ def convert_elements(
 
             # Regular paragraph
             else:
+                base_text_style = named_text_styles.get(named_style, {})
                 content, para_anchors, para_embedded, para_warnings = (
                     convert_paragraph_content(
-                        paragraph, inline_objects, positioned_objects
+                        paragraph, inline_objects, positioned_objects, base_text_style
                     )
                 )
                 if content:
@@ -234,6 +283,7 @@ def convert_paragraph_content(
     paragraph: dict[str, Any],
     inline_objects: dict[str, Any],
     positioned_objects: dict[str, Any],
+    base_text_style: dict[str, Any] | None = None,
 ) -> tuple[list, list[Anchor], list[EmbeddedObject], list[str]]:
     """Convert paragraph elements to AST nodes.
 
@@ -241,6 +291,7 @@ def convert_paragraph_content(
         paragraph: Paragraph element.
         inline_objects: Map of inline object IDs.
         positioned_objects: Map of positioned object IDs.
+        base_text_style: Base text style from named style definition to merge with.
 
     Returns:
         Tuple of (content_nodes, anchors, embedded_objects, warnings).
@@ -249,6 +300,9 @@ def convert_paragraph_content(
     anchors: list[Anchor] = []
     embedded: list[EmbeddedObject] = []
     warnings: list[str] = []
+
+    if base_text_style is None:
+        base_text_style = {}
 
     for elem in paragraph.get("elements", []):
         start_index = elem.get("startIndex", 0)
@@ -259,7 +313,9 @@ def convert_paragraph_content(
             if not text:
                 continue
 
-            style = text_run.get("textStyle", {})
+            # Merge base style (from named style definition) with inline overrides
+            inline_style = text_run.get("textStyle", {})
+            style = _merge_text_style_dicts(base_text_style, inline_style)
             node = convert_text_with_style(text, style, warnings)
             content.append(node)
 
@@ -484,6 +540,7 @@ def collect_list_items(
     start_idx: int,
     inline_objects: dict[str, Any],
     positioned_objects: dict[str, Any],
+    named_text_styles: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict], int]:
     """Collect consecutive list items.
 
@@ -492,10 +549,14 @@ def collect_list_items(
         start_idx: Index of first list item.
         inline_objects: Inline objects map.
         positioned_objects: Positioned objects map.
+        named_text_styles: Map of style type name to textStyle dict for merging.
 
     Returns:
         Tuple of (list of item dicts, end index).
     """
+    if named_text_styles is None:
+        named_text_styles = {}
+
     items = []
     i = start_idx
 
@@ -511,8 +572,13 @@ def collect_list_items(
         bullet = paragraph.get("bullet", {})
         nesting_level = bullet.get("nestingLevel", 0)
 
+        # Get the named style for this list item paragraph
+        para_style = paragraph.get("paragraphStyle", {})
+        named_style = para_style.get("namedStyleType", "")
+        base_text_style = named_text_styles.get(named_style, {})
+
         content, anchors, embedded, warnings = convert_paragraph_content(
-            paragraph, inline_objects, positioned_objects
+            paragraph, inline_objects, positioned_objects, base_text_style
         )
 
         items.append(
