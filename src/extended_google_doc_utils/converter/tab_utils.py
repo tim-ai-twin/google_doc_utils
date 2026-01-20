@@ -94,6 +94,66 @@ def get_tab_content(document: dict[str, Any], tab_id: str) -> dict[str, Any]:
     return document.get("body", {})
 
 
+def get_tab_document_style(document: dict[str, Any], tab_id: str) -> dict[str, Any]:
+    """Get the documentStyle for a specific tab.
+
+    For multi-tab documents, each tab can have its own page settings
+    (background color, margins, page size). This function returns the
+    tab-specific documentStyle.
+
+    Args:
+        document: The Google Docs API document response.
+        tab_id: The tab ID (empty for default).
+
+    Returns:
+        The documentStyle dict for the tab.
+    """
+    tabs = get_tabs(document)
+
+    if not tabs:
+        # Single-tab document - documentStyle is at top level
+        return document.get("documentStyle", {})
+
+    # Find the matching tab
+    for tab in tabs:
+        tab_props = tab.get("tabProperties", {})
+        if tab_props.get("tabId", "") == tab_id:
+            return tab.get("documentTab", {}).get("documentStyle", {})
+
+    # Tab not found - fall back to first tab or top-level
+    if tabs:
+        return tabs[0].get("documentTab", {}).get("documentStyle", {})
+    return document.get("documentStyle", {})
+
+
+def get_tab_named_styles(document: dict[str, Any], tab_id: str) -> dict[str, Any]:
+    """Get the namedStyles for a specific tab.
+
+    Args:
+        document: The Google Docs API document response.
+        tab_id: The tab ID (empty for default).
+
+    Returns:
+        The namedStyles dict for the tab.
+    """
+    tabs = get_tabs(document)
+
+    if not tabs:
+        # Single-tab document - namedStyles is at top level
+        return document.get("namedStyles", {})
+
+    # Find the matching tab
+    for tab in tabs:
+        tab_props = tab.get("tabProperties", {})
+        if tab_props.get("tabId", "") == tab_id:
+            return tab.get("documentTab", {}).get("namedStyles", {})
+
+    # Tab not found - fall back to first tab or top-level
+    if tabs:
+        return tabs[0].get("documentTab", {}).get("namedStyles", {})
+    return document.get("namedStyles", {})
+
+
 def get_inline_objects(document: dict[str, Any], tab_id: str) -> dict[str, Any]:
     """Get inline objects map for a specific tab.
 

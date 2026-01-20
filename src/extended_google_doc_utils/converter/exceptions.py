@@ -110,3 +110,56 @@ class FontValidationError(ConverterError):
         self.font_name = font_name
         self.weight = weight
         self.suggestions = suggestions or []
+
+
+# =============================================================================
+# Style Transfer Exceptions (Feature 130)
+# =============================================================================
+
+
+class StyleTransferError(ConverterError):
+    """Base exception for style transfer operations."""
+
+    pass
+
+
+class DocumentAccessError(StyleTransferError):
+    """Cannot access document (permissions, not found).
+
+    Attributes:
+        document_id: The document ID that could not be accessed.
+        reason: The reason for access failure.
+    """
+
+    def __init__(self, document_id: str, reason: str = "unknown"):
+        self.document_id = document_id
+        self.reason = reason
+        super().__init__(f"Cannot access document '{document_id}': {reason}")
+
+
+class StyleReadError(StyleTransferError):
+    """Error reading styles from document.
+
+    Attributes:
+        document_id: The document ID.
+        detail: Specific error detail.
+    """
+
+    def __init__(self, document_id: str, detail: str):
+        self.document_id = document_id
+        self.detail = detail
+        super().__init__(f"Error reading styles from '{document_id}': {detail}")
+
+
+class StyleWriteError(StyleTransferError):
+    """Error applying styles to document.
+
+    Attributes:
+        document_id: The target document ID.
+        detail: Specific error detail.
+    """
+
+    def __init__(self, document_id: str, detail: str):
+        self.document_id = document_id
+        self.detail = detail
+        super().__init__(f"Error applying styles to '{document_id}': {detail}")

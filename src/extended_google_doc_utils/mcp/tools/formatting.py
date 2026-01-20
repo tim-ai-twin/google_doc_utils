@@ -124,34 +124,65 @@ def _transform_formatting(
     lines = content.split("\n")
     transformed_lines = []
 
-    # Build formatting props string for body text
-    body_props = []
+    # Build formatting props for body text
+    body_props_dict = {}
     if body_font:
-        body_props.append(f"font:{body_font}")
+        body_props_dict["font"] = body_font
     if body_size:
-        body_props.append(f"size:{body_size}")
+        body_props_dict["size"] = body_size
 
-    # Build formatting props string for headings
-    heading_props = []
+    # Build formatting props for headings
+    heading_props_dict = {}
     if heading_font:
-        heading_props.append(f"font:{heading_font}")
+        heading_props_dict["font"] = heading_font
+
+    # Pattern to match existing inline formatting: {!props}content{/!}
+    inline_format_pattern = re.compile(r"^\{!([^}]+)\}(.*)\{/!\}$")
 
     for line in lines:
         # Check if line is a heading (starts with #)
         heading_match = re.match(r"^(#{1,6})\s+(.*)$", line)
 
-        if heading_match and heading_props:
+        if heading_match and heading_props_dict:
             # Apply heading formatting
             hashes = heading_match.group(1)
             heading_text = heading_match.group(2)
-            props_str = ",".join(heading_props)
-            transformed_lines.append(f"{hashes} {{!{props_str}}}{heading_text}{{/!}}")
+
+            # Check if heading text already has formatting
+            format_match = inline_format_pattern.match(heading_text)
+            if format_match:
+                # Merge new props with existing ones (new props override)
+                existing_props = _parse_format_props(format_match.group(1))
+                inner_text = format_match.group(2)
+                merged_props = {**existing_props, **heading_props_dict}
+                props_str = ",".join(f"{k}:{v}" for k, v in merged_props.items())
+                transformed_lines.append(f"{hashes} {{!{props_str}}}{inner_text}{{/!}}")
+            else:
+                # No existing formatting, wrap with new props
+                props_str = ",".join(f"{k}:{v}" for k, v in heading_props_dict.items())
+                transformed_lines.append(f"{hashes} {{!{props_str}}}{heading_text}{{/!}}")
             changes_made += 1
-        elif body_props and line.strip() and not heading_match:
+        elif body_props_dict and line.strip() and not heading_match:
             # Apply body formatting to non-empty, non-heading lines
-            # Skip lines that are embedded objects, anchors, or already formatted
-            if not line.strip().startswith("{^") and not line.strip().startswith("{!"):
-                props_str = ",".join(body_props)
+            stripped = line.strip()
+            # Skip lines that are embedded objects or anchors
+            if stripped.startswith("{^"):
+                transformed_lines.append(line)
+            # Check if already has formatting
+            elif stripped.startswith("{!") and stripped.endswith("{/!}"):
+                format_match = inline_format_pattern.match(stripped)
+                if format_match:
+                    # Merge new props with existing ones
+                    existing_props = _parse_format_props(format_match.group(1))
+                    inner_text = format_match.group(2)
+                    merged_props = {**existing_props, **body_props_dict}
+                    props_str = ",".join(f"{k}:{v}" for k, v in merged_props.items())
+                    transformed_lines.append(f"{{!{props_str}}}{inner_text}{{/!}}")
+                    changes_made += 1
+                else:
+                    transformed_lines.append(line)
+            elif not stripped.startswith("{!"):
+                props_str = ",".join(f"{k}:{v}" for k, v in body_props_dict.items())
                 transformed_lines.append(f"{{!{props_str}}}{line}{{/!}}")
                 changes_made += 1
             else:

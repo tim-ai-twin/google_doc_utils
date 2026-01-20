@@ -191,6 +191,9 @@ def register_tools() -> None:
     # Formatting tools: normalize_formatting, extract_styles, apply_styles
     from extended_google_doc_utils.mcp.tools import formatting  # noqa: F401
 
+    # Style transfer tools: get_document_styles, apply_document_styles
+    from extended_google_doc_utils.mcp.tools import styles  # noqa: F401
+
     logger.info("All MCP tools registered")
 
 

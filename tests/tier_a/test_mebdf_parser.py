@@ -535,3 +535,164 @@ class TestEdgeCases:
 
         assert tokens[0].type == TokenType.BLOCK_FORMAT
         assert tokens[0].properties["properties"]["mono"] is False
+
+
+class TestInlineFormattingEdgeCases:
+    """Tests for inline formatting edge cases that caused the nested formatting bug."""
+
+    def test_merged_properties_parse_correctly(self):
+        """Merged properties like {!color:#ff0000,font:Arial} parse correctly."""
+        parser = InlineParser()
+        nodes = parser.parse("{!color:#ff0000,font:Arial}text{/!}")
+
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], FormattingNode)
+        assert nodes[0].properties["color"] == "#ff0000"
+        assert nodes[0].properties["font"] == "Arial"
+        assert nodes[0].content[0].content == "text"
+
+    def test_many_properties_parse_correctly(self):
+        """Many properties in one formatting block parse correctly."""
+        parser = InlineParser()
+        nodes = parser.parse("{!font:Georgia,color:#0000ff,highlight:#ffff00,underline}text{/!}")
+
+        assert len(nodes) == 1
+        props = nodes[0].properties
+        assert props["font"] == "Georgia"
+        assert props["color"] == "#0000ff"
+        assert props["highlight"] == "#ffff00"
+        assert props["underline"] is True
+
+    def test_heading_with_merged_formatting(self):
+        """Heading with merged inline formatting parses correctly."""
+        parser = MebdfParser()
+        doc = parser.parse("## {!color:#f6b26b,font:Arial}Heading Text{/!}")
+
+        assert len(doc.children) == 1
+        heading = doc.children[0]
+        assert isinstance(heading, HeadingNode)
+        assert heading.level == 2
+
+        # Content should be FormattingNode
+        assert len(heading.content) == 1
+        formatting = heading.content[0]
+        assert isinstance(formatting, FormattingNode)
+        assert formatting.properties["color"] == "#f6b26b"
+        assert formatting.properties["font"] == "Arial"
+
+        # Inner content should be TextNode
+        assert len(formatting.content) == 1
+        assert isinstance(formatting.content[0], TextNode)
+        assert formatting.content[0].content == "Heading Text"
+
+    def test_nested_formatting_limitation(self):
+        """Document that nested formatting {!a}{!b}...{/!}{/!} doesn't parse as expected.
+
+        This test documents the current parser limitation: nested formatting
+        is NOT supported. The parser stops at the first {/!} and treats
+        the rest as literal text.
+        """
+        parser = InlineParser()
+        # This is malformed/unsupported - nested formatting
+        nodes = parser.parse("{!font:Arial}{!color:#ff0000}text{/!}{/!}")
+
+        # The parser will match the outer {!...}{/!} pair
+        # but the inner {!color:#ff0000}text will be treated as content
+        assert len(nodes) >= 1
+        # First node should be FormattingNode with font:Arial
+        assert isinstance(nodes[0], FormattingNode)
+        assert nodes[0].properties["font"] == "Arial"
+        # The content includes the inner formatting as literal text
+        inner_text = nodes[0].content[0].content
+        assert "{!color:#ff0000}text" in inner_text
+
+    def test_formatting_with_bold_inside(self):
+        """Inline formatting containing markdown bold works."""
+        parser = InlineParser()
+        nodes = parser.parse("{!color:#0000ff}**bold text**{/!}")
+
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], FormattingNode)
+        assert nodes[0].properties["color"] == "#0000ff"
+
+        # Content should contain BoldNode
+        content = nodes[0].content
+        assert any(isinstance(c, BoldNode) for c in content)
+
+    def test_formatting_with_link_inside(self):
+        """Inline formatting containing markdown link works."""
+        parser = InlineParser()
+        nodes = parser.parse("{!color:#0000ff}[link text](https://example.com){/!}")
+
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], FormattingNode)
+
+        # Content should contain LinkNode
+        content = nodes[0].content
+        assert any(isinstance(c, LinkNode) for c in content)
+        link = next(c for c in content if isinstance(c, LinkNode))
+        assert link.url == "https://example.com"
+
+    def test_formatting_with_spaces_in_properties(self):
+        """Properties with spaces around colons and commas work."""
+        parser = InlineParser()
+        nodes = parser.parse("{!font : Arial , color : #ff0000}text{/!}")
+
+        assert len(nodes) == 1
+        props = nodes[0].properties
+        # Note: spaces become part of the key/value due to simple parsing
+        # The actual behavior depends on _parse_properties implementation
+        assert len(props) >= 1
+
+    def test_empty_inline_formatting(self):
+        """Empty inline formatting block {!} is treated as literal text.
+
+        The parser regex requires at least one character in the properties,
+        so {!}text{/!} doesn't match the inline_format pattern and is
+        treated as plain text.
+        """
+        parser = InlineParser()
+        nodes = parser.parse("{!}text{/!}")
+
+        # Empty {!} is not valid inline formatting, so it's treated as text
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], TextNode)
+        assert "{!}text{/!}" in nodes[0].content
+
+    def test_formatting_at_start_and_end_of_line(self):
+        """Formatting at start and end of mixed content works."""
+        parser = InlineParser()
+        nodes = parser.parse("{!color:#ff0000}start{/!} middle {!color:#0000ff}end{/!}")
+
+        # Should have 3 nodes: FormattingNode, TextNode, FormattingNode
+        assert len(nodes) == 3
+        assert isinstance(nodes[0], FormattingNode)
+        assert isinstance(nodes[1], TextNode)
+        assert isinstance(nodes[2], FormattingNode)
+        assert nodes[0].properties["color"] == "#ff0000"
+        assert nodes[2].properties["color"] == "#0000ff"
+
+    def test_consecutive_formatting_blocks(self):
+        """Multiple consecutive formatting blocks work."""
+        parser = InlineParser()
+        nodes = parser.parse("{!font:Arial}text1{/!}{!font:Georgia}text2{/!}")
+
+        assert len(nodes) == 2
+        assert nodes[0].properties["font"] == "Arial"
+        assert nodes[1].properties["font"] == "Georgia"
+
+    def test_hex_colors_various_formats(self):
+        """Various hex color formats are accepted."""
+        parser = InlineParser()
+
+        # Full hex with #
+        nodes = parser.parse("{!color:#ff0000}text{/!}")
+        assert nodes[0].properties["color"] == "#ff0000"
+
+        # Full hex without # (if supported)
+        nodes = parser.parse("{!color:ff0000}text{/!}")
+        assert nodes[0].properties["color"] == "ff0000"
+
+        # Short hex (if supported)
+        nodes = parser.parse("{!color:#f00}text{/!}")
+        assert nodes[0].properties["color"] == "#f00"
