@@ -14,15 +14,15 @@ intents:
       - import_section
     order_sensitive: true
     variants:
-      - text: "Update the Weekly Status section in the Project Status Report"
+      - text: "Update the Weekly Status section in the Project Status Report to show this weeks data is still being calculated and will be available tomorrow"
         style: natural
-      - text: "I need to change the Introduction section in the Project Status Report"
+      - text: "I need to change the Introduction section in the Project Status Report to say that international rollout is paused until VP review next week"
         style: natural
-      - text: "Edit the part under 'Budget Analysis' in the Project Status Report"
+      - text: "Edit the part under 'Budget Analysis' in the Project Status Report to say that the budget is now $100,000, and that includes a buffer for scope discovery."
         style: indirect
       - text: "Something needs to change in the Project Status Report, the budget section doesn't look right"
         style: ambiguous
-      - text: "In the Project Status Report, export the Budget Analysis section as markdown, then import it back after changes"
+      - text: "In the Project Status Report, export the Budget Analysis, highlight the first line, then import it back after changes"
         style: explicit
 
   - name: read-document

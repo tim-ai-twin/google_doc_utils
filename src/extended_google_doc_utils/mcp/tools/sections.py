@@ -39,8 +39,11 @@ def export_section(
     """Export a specific section of a document to MEBDF markdown.
 
     Use this tool to read ONE section of a document without retrieving
-    the entire document. The section includes content from the heading
-    through all subsections until the next heading of equal or higher level.
+    the entire document. To EDIT a section, export it first, modify the
+    content, then call import_section to write changes back.
+
+    The section includes content from the heading through all subsections
+    until the next heading of equal or higher level.
 
     IMPORTANT: Call get_hierarchy first to find the anchor_id for your
     target section.
@@ -58,10 +61,14 @@ def export_section(
         - anchor_id: Echo back the requested anchor ID
         - warnings: List of any non-fatal issues (e.g., unsupported formatting)
 
-    Example:
-        First call: get_hierarchy(document_id="abc123")
-        Response shows: {"headings": [{"anchor_id": "h.xyz", "text": "My Section"}]}
-        Then call: export_section(document_id="abc123", anchor_id="h.xyz")
+    Example workflow — editing a section:
+        1. get_hierarchy(document_id="abc123")
+           → {"headings": [{"anchor_id": "h.xyz", "text": "My Section"}]}
+        2. export_section(document_id="abc123", anchor_id="h.xyz")
+           → {"content": "## My Section\\n\\nOriginal text.\\n"}
+        3. Modify the content as needed.
+        4. import_section(document_id="abc123", anchor_id="h.xyz",
+                          content="## My Section\\n\\nUpdated text.\\n")
     """
     try:
         converter = get_converter()
@@ -92,8 +99,9 @@ def import_section(
 ) -> dict[str, Any]:
     """Replace a section's content with new MEBDF markdown.
 
-    IMPORTANT: Only the target section is modified. All other content
-    in the document remains UNCHANGED. This enables safe editing of
+    Call export_section first to get the current content, then pass the
+    modified version here. Only the target section is modified — all other
+    content in the document remains UNCHANGED. This enables safe editing of
     shared documents where you only modify your assigned section.
 
     The content should include the section heading (unless replacing preamble).
@@ -148,6 +156,7 @@ def import_section(
         - warnings: List of any non-fatal issues
 
     Example:
+        # After exporting and editing the content:
         import_section(
             document_id="abc123",
             anchor_id="h.xyz",
