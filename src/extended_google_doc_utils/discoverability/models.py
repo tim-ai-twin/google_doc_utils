@@ -63,7 +63,7 @@ class TestSuite:
 class RunConfig:
     """Configuration for a test run."""
 
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-haiku-4-5-20251001"
     mode: str = "mock"  # "mock" or "live"
     trials: int = 1
     max_attempts: int = 10

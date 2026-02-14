@@ -162,8 +162,8 @@ def main() -> None:
     run_parser = subparsers.add_parser("run", help="Run the test suite")
     run_parser.add_argument("--suite", type=str, help="Path to test suite YAML")
     run_parser.add_argument(
-        "--model", type=str, default="claude-sonnet-4-20250514",
-        help="LLM model ID (default: claude-sonnet-4-20250514)",
+        "--model", type=str, default="claude-haiku-4-5-20251001",
+        help="LLM model ID (default: claude-haiku-4-5-20251001)",
     )
     run_parser.add_argument(
         "--mode", choices=["mock", "live"], default="mock",
