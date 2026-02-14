@@ -97,6 +97,7 @@ def google_credentials():
         CredentialManager,
         CredentialSourceDetector,
         MissingEnvironmentVariableError,
+        TokenRevokedError,
     )
 
     try:
@@ -111,6 +112,9 @@ def google_credentials():
         yield credentials
     except MissingEnvironmentVariableError:
         # Expected when env vars not configured - return None
+        yield None
+    except TokenRevokedError:
+        # Token revoked - return None, Tier B tests will be skipped
         yield None
 
 

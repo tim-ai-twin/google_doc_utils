@@ -1,0 +1,110 @@
+suite:
+  name: default
+  defaults:
+    trials: 10
+    max_attempts: 10
+
+intents:
+  - name: edit-section
+    description: "Edit a specific section of a document by heading"
+    expected_tools:
+      - get_hierarchy
+      - export_section
+      - import_section
+    order_sensitive: true
+    variants:
+      - text: "Update the weekly status section in my project doc"
+        style: natural
+      - text: "I need to change the Introduction heading content"
+        style: natural
+      - text: "Edit the part under 'Budget Analysis'"
+        style: indirect
+      - text: "Can you modify a section of my Google Doc?"
+        style: ambiguous
+      - text: "Export the section with anchor ID h.abc123, modify it, then import it back"
+        style: explicit
+
+  - name: read-document
+    description: "Read the full content of a document"
+    expected_tools:
+      - export_tab
+    order_sensitive: false
+    variants:
+      - text: "Show me what's in my project status report"
+        style: natural
+      - text: "I want to read the contents of a Google Doc"
+        style: natural
+      - text: "What does this document say?"
+        style: indirect
+      - text: "Can you get me the text from a doc?"
+        style: ambiguous
+      - text: "Export the full tab content of document ID 1aBcDeFg"
+        style: explicit
+
+  - name: cleanup-formatting
+    description: "Normalize formatting in a document for consistency"
+    expected_tools:
+      - normalize_formatting
+    order_sensitive: false
+    variants:
+      - text: "Clean up the formatting in my report so it looks consistent"
+        style: natural
+      - text: "The fonts and spacing in this doc are all over the place, fix them"
+        style: natural
+      - text: "Make everything in this document use the same style"
+        style: indirect
+      - text: "This document looks messy, can you help?"
+        style: ambiguous
+      - text: "Normalize the formatting of document 1aBcDeFg with Arial 11pt body text"
+        style: explicit
+
+  - name: transfer-styles
+    description: "Apply formatting styles from one document to another"
+    expected_tools:
+      - apply_document_styles
+    order_sensitive: false
+    variants:
+      - text: "Make this document look like my company template"
+        style: natural
+      - text: "Apply the styles from document A to document B"
+        style: natural
+      - text: "Copy the formatting between two documents"
+        style: indirect
+      - text: "The fonts and heading styles should match the other doc"
+        style: ambiguous
+      - text: "Transfer document-level properties and named styles from source to target"
+        style: explicit
+
+  - name: find-document
+    description: "Find a Google Doc by name or search query"
+    expected_tools:
+      - list_documents
+    order_sensitive: false
+    variants:
+      - text: "Find my project status report"
+        style: natural
+      - text: "I'm looking for a document called 'Q1 Planning'"
+        style: natural
+      - text: "Which documents do I have access to?"
+        style: indirect
+      - text: "I need to find a doc but I only remember part of the name"
+        style: ambiguous
+      - text: "List documents matching the query 'budget' with max 10 results"
+        style: explicit
+
+  - name: understand-structure
+    description: "Understand the heading structure and organization of a document"
+    expected_tools:
+      - get_hierarchy
+    order_sensitive: false
+    variants:
+      - text: "What sections does my project report have?"
+        style: natural
+      - text: "Show me the outline of this Google Doc"
+        style: natural
+      - text: "I want to see how this document is organized"
+        style: indirect
+      - text: "What's in this doc?"
+        style: ambiguous
+      - text: "Get the heading hierarchy with anchor IDs for document 1aBcDeFg"
+        style: explicit
