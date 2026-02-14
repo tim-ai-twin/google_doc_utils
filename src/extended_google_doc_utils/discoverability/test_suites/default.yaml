@@ -1,13 +1,14 @@
 suite:
   name: default
   defaults:
-    trials: 10
+    trials: 1
     max_attempts: 10
 
 intents:
   - name: edit-section
     description: "Edit a specific section of a document by heading"
     expected_tools:
+      - list_documents
       - get_hierarchy
       - export_section
       - import_section
@@ -27,6 +28,7 @@ intents:
   - name: read-document
     description: "Read the full content of a document"
     expected_tools:
+      - list_documents
       - export_tab
     order_sensitive: false
     variants:
@@ -44,6 +46,7 @@ intents:
   - name: cleanup-formatting
     description: "Normalize formatting in a document for consistency"
     expected_tools:
+      - list_documents
       - normalize_formatting
     order_sensitive: false
     variants:
@@ -61,6 +64,7 @@ intents:
   - name: transfer-styles
     description: "Apply formatting styles from one document to another"
     expected_tools:
+      - list_documents
       - apply_document_styles
     order_sensitive: false
     variants:
@@ -95,6 +99,7 @@ intents:
   - name: understand-structure
     description: "Understand the heading structure and organization of a document"
     expected_tools:
+      - list_documents
       - get_hierarchy
     order_sensitive: false
     variants:

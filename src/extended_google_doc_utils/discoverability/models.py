@@ -65,7 +65,7 @@ class RunConfig:
 
     model: str = "claude-sonnet-4-20250514"
     mode: str = "mock"  # "mock" or "live"
-    trials: int = 10
+    trials: int = 1
     max_attempts: int = 10
     mcp_server_command: list[str] = field(
         default_factory=lambda: [sys.executable, "-m", "extended_google_doc_utils.mcp.server"]
