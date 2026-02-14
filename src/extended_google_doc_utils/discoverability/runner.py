@@ -286,6 +286,9 @@ async def run_single_trial(
     attempts: list[AttemptRecord] = []
     next_expected_idx = 0
     sequence_pos = 0
+    total_input_tokens = 0
+    total_output_tokens = 0
+    budget_exceeded = False
 
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": prompt_text},
@@ -295,6 +298,12 @@ async def run_single_trial(
         response = _call_with_backoff(
             client, config.model, SYSTEM_PROMPT, tools, messages
         )
+
+        # Track token usage for this API call
+        round_input = response.usage.input_tokens if response.usage else 0
+        round_output = response.usage.output_tokens if response.usage else 0
+        total_input_tokens += round_input
+        total_output_tokens += round_output
 
         # Check if the LLM wants to call tools
         if response.stop_reason != "tool_use":
@@ -307,13 +316,21 @@ async def run_single_trial(
                     parameters={},
                     classification=Classification.NO_TOOL_CALL,
                     matched_expected_step=None,
+                    input_tokens=round_input,
+                    output_tokens=round_output,
                 ))
             break
 
         # Process all tool_use blocks in the response
         tool_results = []
+        tool_use_count = sum(1 for b in response.content if b.type == "tool_use")
+        # Split round tokens evenly across tool_use blocks in this response
+        per_block_input = round_input // max(tool_use_count, 1)
+        per_block_output = round_output // max(tool_use_count, 1)
+        block_idx = 0
         for block in response.content:
             if block.type == "tool_use":
+                block_idx += 1
                 sequence_pos += 1
                 tool_name = block.name
                 parameters = block.input if isinstance(block.input, dict) else {}
@@ -324,12 +341,22 @@ async def run_single_trial(
                 if classification == Classification.CORRECT and matched_step is not None:
                     next_expected_idx = matched_step + 1
 
+                # Last block gets remainder tokens to avoid rounding loss
+                if block_idx == tool_use_count:
+                    block_input = round_input - per_block_input * (tool_use_count - 1)
+                    block_output = round_output - per_block_output * (tool_use_count - 1)
+                else:
+                    block_input = per_block_input
+                    block_output = per_block_output
+
                 attempts.append(AttemptRecord(
                     sequence_position=sequence_pos,
                     tool_name=tool_name,
                     parameters=parameters,
                     classification=classification,
                     matched_expected_step=matched_step,
+                    input_tokens=block_input,
+                    output_tokens=block_output,
                 ))
 
                 # Get tool response
@@ -361,12 +388,24 @@ async def run_single_trial(
         if next_expected_idx >= len(expected_tools):
             break
 
+        # Check token budget
+        if config.max_tokens_per_trial > 0 and total_input_tokens >= config.max_tokens_per_trial:
+            budget_exceeded = True
+            logger.warning(
+                f"Token budget exceeded ({total_input_tokens} >= "
+                f"{config.max_tokens_per_trial}), stopping trial"
+            )
+            break
+
     success = _evaluate_trial_success(attempts, expected_tools, order_sensitive)
 
     return TrialResult(
         trial_number=trial_number,
         success=success,
         attempts=attempts,
+        input_tokens=total_input_tokens,
+        output_tokens=total_output_tokens,
+        budget_exceeded=budget_exceeded,
     )
 
 

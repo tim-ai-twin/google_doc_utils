@@ -14,15 +14,15 @@ intents:
       - import_section
     order_sensitive: true
     variants:
-      - text: "Update the weekly status section in my project doc"
+      - text: "Update the Weekly Status section in the Project Status Report"
         style: natural
-      - text: "I need to change the Introduction heading content"
+      - text: "I need to change the Introduction section in the Project Status Report"
         style: natural
-      - text: "Edit the part under 'Budget Analysis'"
+      - text: "Edit the part under 'Budget Analysis' in the Project Status Report"
         style: indirect
-      - text: "Can you modify a section of my Google Doc?"
+      - text: "Something needs to change in the Project Status Report, the budget section doesn't look right"
         style: ambiguous
-      - text: "Export the section with anchor ID h.abc123, modify it, then import it back"
+      - text: "In the Project Status Report, export the Budget Analysis section as markdown, then import it back after changes"
         style: explicit
 
   - name: read-document
@@ -32,15 +32,15 @@ intents:
       - export_tab
     order_sensitive: false
     variants:
-      - text: "Show me what's in my project status report"
+      - text: "Show me what's in the Project Status Report"
         style: natural
-      - text: "I want to read the contents of a Google Doc"
+      - text: "I want to read the contents of the Meeting Notes"
         style: natural
-      - text: "What does this document say?"
+      - text: "What does the Company Style Guide say?"
         style: indirect
-      - text: "Can you get me the text from a doc?"
+      - text: "Can you get me the text from the Q1 Planning notes?"
         style: ambiguous
-      - text: "Export the full tab content of document ID 1aBcDeFg"
+      - text: "Export the full content of the Project Status Report"
         style: explicit
 
   - name: cleanup-formatting
@@ -50,15 +50,15 @@ intents:
       - normalize_formatting
     order_sensitive: false
     variants:
-      - text: "Clean up the formatting in my report so it looks consistent"
+      - text: "Clean up the formatting in the Project Status Report so it looks consistent"
         style: natural
-      - text: "The fonts and spacing in this doc are all over the place, fix them"
+      - text: "The fonts and spacing in the Meeting Notes are all over the place, fix them"
         style: natural
-      - text: "Make everything in this document use the same style"
+      - text: "Make everything in the Meeting Notes use the same style"
         style: indirect
-      - text: "This document looks messy, can you help?"
+      - text: "The Project Status Report looks messy, can you help?"
         style: ambiguous
-      - text: "Normalize the formatting of document 1aBcDeFg with Arial 11pt body text"
+      - text: "Normalize the formatting of the Project Status Report with Arial 11pt body text"
         style: explicit
 
   - name: transfer-styles
@@ -68,15 +68,15 @@ intents:
       - apply_document_styles
     order_sensitive: false
     variants:
-      - text: "Make this document look like my company template"
+      - text: "Make the Project Status Report look like the Company Style Guide"
         style: natural
-      - text: "Apply the styles from document A to document B"
+      - text: "Apply the styles from the Company Style Guide to the Meeting Notes"
         style: natural
-      - text: "Copy the formatting between two documents"
+      - text: "Copy the formatting from the Company Style Guide to the Project Status Report"
         style: indirect
-      - text: "The fonts and heading styles should match the other doc"
+      - text: "The Meeting Notes fonts and heading styles should match the Company Style Guide"
         style: ambiguous
-      - text: "Transfer document-level properties and named styles from source to target"
+      - text: "Transfer the document-level styles from the Company Style Guide to the Project Status Report"
         style: explicit
 
   - name: find-document
@@ -91,7 +91,7 @@ intents:
         style: natural
       - text: "Which documents do I have access to?"
         style: indirect
-      - text: "I need to find a doc but I only remember part of the name"
+      - text: "I need to find a doc, I think it had 'planning' in the name"
         style: ambiguous
       - text: "List documents matching the query 'budget' with max 10 results"
         style: explicit
@@ -103,13 +103,13 @@ intents:
       - get_hierarchy
     order_sensitive: false
     variants:
-      - text: "What sections does my project report have?"
+      - text: "What sections does the Project Status Report have?"
         style: natural
-      - text: "Show me the outline of this Google Doc"
+      - text: "Show me the outline of the Meeting Notes"
         style: natural
-      - text: "I want to see how this document is organized"
+      - text: "I want to see how the Company Style Guide is organized"
         style: indirect
-      - text: "What's in this doc?"
+      - text: "I'm not sure what's in the Project Status Report"
         style: ambiguous
-      - text: "Get the heading hierarchy with anchor IDs for document 1aBcDeFg"
+      - text: "Get the heading hierarchy of the Project Status Report"
         style: explicit

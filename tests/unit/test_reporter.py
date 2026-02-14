@@ -169,3 +169,81 @@ class TestGenerateReport:
         nested_dir = str(tmp_path / "nested" / "reports")
         report_path = generate_report(sample_test_run, nested_dir)
         assert os.path.exists(report_path)
+
+    def test_report_token_usage_section(self, tmp_path):
+        """Token usage section appears when trials have token data."""
+        trials = [
+            TrialResult(
+                trial_number=1,
+                success=True,
+                attempts=[
+                    AttemptRecord(
+                        sequence_position=1,
+                        tool_name="list_documents",
+                        parameters={},
+                        classification=Classification.CORRECT,
+                        matched_expected_step=0,
+                        input_tokens=2500,
+                        output_tokens=300,
+                    ),
+                ],
+                input_tokens=2500,
+                output_tokens=300,
+            ),
+            TrialResult(
+                trial_number=2,
+                success=False,
+                attempts=[
+                    AttemptRecord(
+                        sequence_position=1,
+                        tool_name="export_tab",
+                        parameters={},
+                        classification=Classification.WRONG_TOOL,
+                        input_tokens=8000,
+                        output_tokens=1200,
+                    ),
+                ],
+                input_tokens=8000,
+                output_tokens=1200,
+                budget_exceeded=True,
+            ),
+        ]
+        run = TestRun(
+            timestamp=datetime(2026, 2, 14, 12, 0, 0),
+            commit_hash="def5678",
+            model="claude-sonnet-4-20250514",
+            mode="mock",
+            trials_per_prompt=2,
+            max_attempts=10,
+            tool_descriptions={"list_documents": "List docs"},
+            results=[
+                IntentResult(
+                    intent_name="find-document",
+                    variant_results=[
+                        VariantResult(
+                            prompt_text="Find my doc",
+                            prompt_style="natural",
+                            trials=trials,
+                        ),
+                    ],
+                ),
+            ],
+        )
+        report_path = generate_report(run, str(tmp_path))
+        with open(report_path) as f:
+            content = f.read()
+
+        assert "## Token Usage" in content
+        assert "Total input tokens" in content
+        assert "10,500" in content  # 2500 + 8000
+        assert "1,500" in content   # 300 + 1200
+        assert "Trials stopped by budget" in content
+        assert "Per-Intent Token Usage" in content
+
+    def test_report_no_token_section_when_zero(self, sample_test_run, tmp_path):
+        """Token usage section is omitted when all token counts are zero."""
+        report_path = generate_report(sample_test_run, str(tmp_path))
+        with open(report_path) as f:
+            content = f.read()
+
+        assert "## Token Usage" not in content

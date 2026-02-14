@@ -37,6 +37,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         mode=args.mode,
         trials=args.trials,
         max_attempts=args.max_attempts,
+        max_tokens_per_trial=args.max_tokens_per_trial,
         credentials_path=args.credentials,
     )
 
@@ -45,6 +46,8 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"  Mode: {config.mode}")
     print(f"  Trials per prompt: {config.trials}")
     print(f"  Max attempts per trial: {config.max_attempts}")
+    if config.max_tokens_per_trial > 0:
+        print(f"  Token budget per trial: {config.max_tokens_per_trial:,}")
 
     intents_to_run = suite.intents
     if args.intent:
@@ -81,6 +84,23 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"  Avg attempts to success:    {scores['avg_attempts_to_success']:.1f}")
     print(f"  Total trials:               {scores['total_trials']}")
     print()
+
+    # Token usage summary
+    all_trials = [
+        t
+        for ir in test_run.results
+        for vr in ir.variant_results
+        for t in vr.trials
+    ]
+    total_input = sum(t.input_tokens for t in all_trials)
+    total_output = sum(t.output_tokens for t in all_trials)
+    if total_input > 0 or total_output > 0:
+        budget_stops = sum(1 for t in all_trials if t.budget_exceeded)
+        total = total_input + total_output
+        print(f"  Total tokens:              {total:,} ({total_input:,} in / {total_output:,} out)")
+        if budget_stops:
+            print(f"  Trials stopped by budget:   {budget_stops}")
+        print()
 
     if scores.get("per_intent"):
         print("Per-Intent Breakdown:")
@@ -156,6 +176,10 @@ def main() -> None:
     run_parser.add_argument(
         "--max-attempts", type=int, default=10,
         help="Max tool calls per trial (default: 10)",
+    )
+    run_parser.add_argument(
+        "--max-tokens-per-trial", type=int, default=0,
+        help="Token budget per trial; 0 = unlimited (default: 0)",
     )
     run_parser.add_argument(
         "--intent", type=str, help="Run only one intent by name",

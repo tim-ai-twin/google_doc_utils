@@ -67,6 +67,7 @@ class RunConfig:
     mode: str = "mock"  # "mock" or "live"
     trials: int = 1
     max_attempts: int = 10
+    max_tokens_per_trial: int = 0  # 0 = no limit
     mcp_server_command: list[str] = field(
         default_factory=lambda: [sys.executable, "-m", "extended_google_doc_utils.mcp.server"]
     )
@@ -82,6 +83,8 @@ class AttemptRecord:
     parameters: dict[str, Any]
     classification: Classification
     matched_expected_step: int | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass
@@ -92,10 +95,17 @@ class TrialResult:
     success: bool
     attempts: list[AttemptRecord]
     total_attempts: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    budget_exceeded: bool = False
 
     def __post_init__(self):
         if self.total_attempts == 0:
             self.total_attempts = len(self.attempts)
+        if self.input_tokens == 0:
+            self.input_tokens = sum(a.input_tokens for a in self.attempts)
+        if self.output_tokens == 0:
+            self.output_tokens = sum(a.output_tokens for a in self.attempts)
 
 
 @dataclass

@@ -32,6 +32,7 @@ def generate_report(
     lines: list[str] = []
     _write_header(lines, run)
     _write_summary(lines, scores)
+    _write_token_usage(lines, run)
     _write_per_intent_results(lines, run)
     _write_desire_path_analysis(lines, run)
     _write_tool_description_snapshot(lines, run)
@@ -78,6 +79,55 @@ def _write_summary(lines: list[str], scores: dict[str, Any]) -> None:
         f"| Avg attempts to success | {scores['avg_attempts_to_success']:.1f} |"
     )
     lines.append(f"| Total trials | {scores['total_trials']} |")
+    lines.append("")
+
+
+def _write_token_usage(lines: list[str], run: TestRun) -> None:
+    """Write token usage summary."""
+    all_trials = [
+        t
+        for intent in run.results
+        for vr in intent.variant_results
+        for t in vr.trials
+    ]
+    total_input = sum(t.input_tokens for t in all_trials)
+    total_output = sum(t.output_tokens for t in all_trials)
+    budget_exceeded_count = sum(1 for t in all_trials if t.budget_exceeded)
+
+    if total_input == 0 and total_output == 0:
+        return
+
+    lines.append("## Token Usage")
+    lines.append("")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
+    lines.append(f"| Total input tokens | {total_input:,} |")
+    lines.append(f"| Total output tokens | {total_output:,} |")
+    lines.append(f"| Total tokens | {total_input + total_output:,} |")
+    if all_trials:
+        avg_input = total_input / len(all_trials)
+        avg_output = total_output / len(all_trials)
+        lines.append(f"| Avg input tokens/trial | {avg_input:,.0f} |")
+        lines.append(f"| Avg output tokens/trial | {avg_output:,.0f} |")
+    if budget_exceeded_count:
+        lines.append(f"| Trials stopped by budget | {budget_exceeded_count} |")
+    lines.append("")
+
+    # Per-intent token breakdown
+    lines.append("### Per-Intent Token Usage")
+    lines.append("")
+    lines.append("| Intent | Input | Output | Avg Input/Trial | Budget Stops |")
+    lines.append("|--------|-------|--------|-----------------|--------------|")
+    for intent in run.results:
+        intent_trials = [t for vr in intent.variant_results for t in vr.trials]
+        inp = sum(t.input_tokens for t in intent_trials)
+        out = sum(t.output_tokens for t in intent_trials)
+        avg_inp = inp / len(intent_trials) if intent_trials else 0
+        stops = sum(1 for t in intent_trials if t.budget_exceeded)
+        lines.append(
+            f"| {intent.intent_name} | {inp:,} | {out:,} "
+            f"| {avg_inp:,.0f} | {stops} |"
+        )
     lines.append("")
 
 
