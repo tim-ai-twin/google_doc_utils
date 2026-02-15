@@ -213,6 +213,46 @@ def _evaluate_trial_success(
         return len(satisfied) >= len(expected_tools)
 
 
+def _check_tools_against_sequence(
+    attempts: list[AttemptRecord],
+    expected_tools: list[str],
+    order_sensitive: bool,
+) -> bool:
+    """Check if attempts satisfy an expected tool sequence (fresh evaluation).
+
+    Unlike _evaluate_trial_success, this does not rely on pre-classified
+    attempt records. It re-evaluates tool names directly against the
+    expected sequence.
+
+    Args:
+        attempts: All tool calls made during the trial.
+        expected_tools: Expected tool sequence to check against.
+        order_sensitive: Whether order matters.
+
+    Returns:
+        True if all expected tools appear in the attempt sequence.
+    """
+    if not expected_tools:
+        return True
+
+    tool_names = [a.tool_name for a in attempts if a.tool_name]
+
+    if order_sensitive:
+        expected_idx = 0
+        for name in tool_names:
+            if expected_idx < len(expected_tools) and name == expected_tools[expected_idx]:
+                expected_idx += 1
+                if expected_idx >= len(expected_tools):
+                    return True
+        return expected_idx >= len(expected_tools)
+    else:
+        remaining = list(expected_tools)
+        for name in tool_names:
+            if name in remaining:
+                remaining.remove(name)
+        return len(remaining) == 0
+
+
 def _call_with_backoff(
     client: anthropic.Anthropic,
     model: str,
@@ -264,6 +304,7 @@ async def run_single_trial(
     trial_number: int = 1,
     order_sensitive: bool = True,
     session: ClientSession | None = None,
+    expected_tools_alt: list[list[str]] | None = None,
 ) -> TrialResult:
     """Execute a single trial of a prompt.
 
@@ -399,6 +440,13 @@ async def run_single_trial(
 
     success = _evaluate_trial_success(attempts, expected_tools, order_sensitive)
 
+    # If primary expected_tools failed, try alternative sequences
+    if not success and expected_tools_alt:
+        for alt_tools in expected_tools_alt:
+            if _check_tools_against_sequence(attempts, alt_tools, order_sensitive):
+                success = True
+                break
+
     return TrialResult(
         trial_number=trial_number,
         success=success,
@@ -417,6 +465,7 @@ async def run_prompt(
     tools: list[dict[str, Any]],
     order_sensitive: bool = True,
     session: ClientSession | None = None,
+    expected_tools_alt: list[list[str]] | None = None,
 ) -> VariantResult:
     """Execute a single prompt variant across N trials.
 
@@ -446,6 +495,7 @@ async def run_prompt(
             trial_number=i + 1,
             order_sensitive=order_sensitive,
             session=session,
+            expected_tools_alt=expected_tools_alt,
         )
         trials.append(trial)
 
@@ -573,6 +623,7 @@ async def run_intent(
             tools=tools,
             order_sensitive=intent.order_sensitive,
             session=session,
+            expected_tools_alt=intent.expected_tools_alt or None,
         )
         variant_results.append(result)
 

@@ -106,6 +106,7 @@ def _parse_intent(raw: dict, filepath: Path) -> UserIntent:
     # Optional fields
     description = raw.get("description", "")
     order_sensitive = raw.get("order_sensitive", True)
+    expected_tools_alt = raw.get("expected_tools_alt", [])
 
     variants = [_parse_variant(v, name, filepath) for v in raw_variants]
 
@@ -113,6 +114,7 @@ def _parse_intent(raw: dict, filepath: Path) -> UserIntent:
         name=name,
         description=description,
         expected_tools=expected_tools,
+        expected_tools_alt=expected_tools_alt,
         variants=variants,
         order_sensitive=order_sensitive,
     )

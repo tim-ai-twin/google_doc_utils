@@ -56,7 +56,7 @@ intents:
         style: natural
       - text: "Make everything in the Meeting Notes use the same style"
         style: indirect
-      - text: "The Project Status Report looks messy, can you help?"
+      - text: "The Project Status Report looks inconsistent, please fix it"
         style: ambiguous
       - text: "Normalize the formatting of the Project Status Report with Arial 11pt body text"
         style: explicit
@@ -66,6 +66,10 @@ intents:
     expected_tools:
       - list_documents
       - apply_document_styles
+    expected_tools_alt:
+      - - list_documents
+        - extract_styles
+        - apply_styles
     order_sensitive: false
     variants:
       - text: "Make the Project Status Report look like the Company Style Guide"

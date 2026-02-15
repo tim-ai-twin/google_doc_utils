@@ -46,6 +46,7 @@ class UserIntent:
     expected_tools: list[str]
     variants: list[PromptVariant]
     order_sensitive: bool = True
+    expected_tools_alt: list[list[str]] = field(default_factory=list)
 
 
 @dataclass
