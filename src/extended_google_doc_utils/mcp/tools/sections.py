@@ -1,8 +1,8 @@
 """Section tools for Google Docs MCP server.
 
 Tools:
-- export_section: Export a specific section to MEBDF markdown
-- import_section: Replace a section's content with MEBDF markdown
+- read_section: Read a specific section to MEBDF markdown
+- write_section: Replace a section's content with MEBDF markdown
 
 These tools enable safe, targeted editing where only the specified section
 is modified while all other content remains unchanged.
@@ -24,19 +24,19 @@ from extended_google_doc_utils.mcp.errors import (
     create_error_response,
 )
 from extended_google_doc_utils.mcp.schemas import (
-    ExportSectionResponse,
-    ImportSectionResponse,
+    ReadSectionResponse,
+    WriteSectionResponse,
 )
 from extended_google_doc_utils.mcp.server import get_converter, mcp
 
 
 @mcp.tool()
-def export_section(
+def read_section(
     document_id: Annotated[str, Field(description="Google Doc ID (from the document URL)")],
     anchor_id: Annotated[str, Field(description="Heading anchor ID from get_hierarchy. Use empty string for preamble.")],
     tab_id: Annotated[str, Field(description="Tab ID for multi-tab documents. Empty for single-tab docs.")] = "",
 ) -> dict[str, Any]:
-    """Export a specific section of a document to MEBDF markdown.
+    """Read a specific section of a document to MEBDF markdown.
 
     Use this tool to read ONE section of a document without retrieving
     the entire document. The section includes content from the heading
@@ -61,15 +61,15 @@ def export_section(
     Example:
         First call: get_hierarchy(document_id="abc123")
         Response shows: {"headings": [{"anchor_id": "h.xyz", "text": "My Section"}]}
-        Then call: export_section(document_id="abc123", anchor_id="h.xyz")
+        Then call: read_section(document_id="abc123", anchor_id="h.xyz")
     """
     try:
         converter = get_converter()
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
-        result = converter.export_section(tab, anchor_id)
+        result = converter.read_section(tab, anchor_id)
 
-        response = ExportSectionResponse(
+        response = ReadSectionResponse(
             success=True,
             content=result.content,
             anchor_id=anchor_id,
@@ -84,7 +84,7 @@ def export_section(
 
 
 @mcp.tool()
-def import_section(
+def write_section(
     document_id: Annotated[str, Field(description="Google Doc ID (from the document URL)")],
     anchor_id: Annotated[str, Field(description="Heading anchor ID for the section to replace. Use empty string for preamble.")],
     content: Annotated[str, Field(description="MEBDF markdown content to write. Should include the section heading line.")],
@@ -148,7 +148,7 @@ def import_section(
         - warnings: List of any non-fatal issues
 
     Example:
-        import_section(
+        write_section(
             document_id="abc123",
             anchor_id="h.xyz",
             content="## My Section\\n\\nUpdated content with **bold** text."
@@ -158,9 +158,9 @@ def import_section(
         converter = get_converter()
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
-        result = converter.import_section(tab, anchor_id, content)
+        result = converter.write_section(tab, anchor_id, content)
 
-        response = ImportSectionResponse(
+        response = WriteSectionResponse(
             success=result.success,
             anchor_id=anchor_id,
             preserved_objects=result.preserved_objects,

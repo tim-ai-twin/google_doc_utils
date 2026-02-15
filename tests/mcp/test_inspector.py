@@ -55,12 +55,12 @@ class TestMCPInspector:
             list_documents,
         )
         from extended_google_doc_utils.mcp.tools.sections import (
-            export_section,
-            import_section,
+            read_section,
+            write_section,
         )
         from extended_google_doc_utils.mcp.tools.tabs import (
-            export_tab,
-            import_tab,
+            read_tab,
+            write_tab,
         )
 
         # Define test invocations for each tool
@@ -68,10 +68,10 @@ class TestMCPInspector:
             ("get_hierarchy", lambda: get_hierarchy(document_id="test", tab_id="")),
             ("list_documents", lambda: list_documents()),
             ("get_metadata", lambda: get_metadata(document_id="test")),
-            ("export_section", lambda: export_section(document_id="test", anchor_id="h.1", tab_id="")),
-            ("import_section", lambda: import_section(document_id="test", anchor_id="h.1", content="# Test", tab_id="")),
-            ("export_tab", lambda: export_tab(document_id="test", tab_id="")),
-            ("import_tab", lambda: import_tab(document_id="test", content="# Test", tab_id="")),
+            ("read_section", lambda: read_section(document_id="test", anchor_id="h.1", tab_id="")),
+            ("write_section", lambda: write_section(document_id="test", anchor_id="h.1", content="# Test", tab_id="")),
+            ("read_tab", lambda: read_tab(document_id="test", tab_id="")),
+            ("write_tab", lambda: write_tab(document_id="test", content="# Test", tab_id="")),
             ("normalize_formatting", lambda: normalize_formatting(document_id="test", body_font="Arial")),
             ("extract_styles", lambda: extract_styles(document_id="test")),
             ("apply_styles", lambda: apply_styles(document_id="test", styles=[])),

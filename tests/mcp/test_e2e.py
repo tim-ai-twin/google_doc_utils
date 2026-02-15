@@ -183,10 +183,10 @@ class TestNavigationToolsE2E:
 class TestSectionToolsE2E:
     """E2E tests for section tools."""
 
-    def test_export_section_returns_content(self, real_mcp_server, test_document):
-        """Test export_section returns section content."""
+    def test_read_section_returns_content(self, real_mcp_server, test_document):
+        """Test read_section returns section content."""
         from extended_google_doc_utils.mcp.tools.navigation import get_hierarchy
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
         # First get the hierarchy to find an anchor
         hierarchy = get_hierarchy(document_id=test_document, tab_id="")
@@ -195,7 +195,7 @@ class TestSectionToolsE2E:
 
         # Export the first section
         first_anchor = hierarchy["headings"][0]["anchor_id"]
-        result = export_section(
+        result = read_section(
             document_id=test_document, anchor_id=first_anchor, tab_id=""
         )
 
@@ -204,21 +204,21 @@ class TestSectionToolsE2E:
         assert len(result["content"]) > 0
 
     def test_export_preamble(self, real_mcp_server, test_document):
-        """Test export_section with empty anchor returns preamble."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+        """Test read_section with empty anchor returns preamble."""
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
-        result = export_section(document_id=test_document, anchor_id="", tab_id="")
+        result = read_section(document_id=test_document, anchor_id="", tab_id="")
 
         # Should succeed (even if preamble is empty)
         assert result["success"] is True
         assert "content" in result
 
-    def test_import_section_modifies_content(self, real_mcp_server, test_document):
-        """Test import_section updates section content."""
+    def test_write_section_modifies_content(self, real_mcp_server, test_document):
+        """Test write_section updates section content."""
         from extended_google_doc_utils.mcp.tools.navigation import get_hierarchy
         from extended_google_doc_utils.mcp.tools.sections import (
-            export_section,
-            import_section,
+            read_section,
+            write_section,
         )
 
         # Get hierarchy to find anchor
@@ -237,7 +237,7 @@ class TestSectionToolsE2E:
         anchor_id = background_heading["anchor_id"]
 
         # Export current content
-        export_result = export_section(
+        export_result = read_section(
             document_id=test_document, anchor_id=anchor_id, tab_id=""
         )
         assert export_result["success"] is True
@@ -245,7 +245,7 @@ class TestSectionToolsE2E:
 
         # Import new content - use simple markdown without anchor to test import
         new_content = "## Background\n\nThis section has been updated.\n"
-        import_result = import_section(
+        import_result = write_section(
             document_id=test_document,
             anchor_id=anchor_id,
             content=new_content,
@@ -255,7 +255,7 @@ class TestSectionToolsE2E:
         assert import_result["success"] is True
 
         # Verify something was exported after import (section still exists)
-        verify_result = export_section(
+        verify_result = read_section(
             document_id=test_document, anchor_id=anchor_id, tab_id=""
         )
         assert verify_result["success"] is True
@@ -266,8 +266,8 @@ class TestSectionToolsE2E:
         """Test that modifying one section doesn't affect others."""
         from extended_google_doc_utils.mcp.tools.navigation import get_hierarchy
         from extended_google_doc_utils.mcp.tools.sections import (
-            export_section,
-            import_section,
+            read_section,
+            write_section,
         )
 
         # Get hierarchy
@@ -288,14 +288,14 @@ class TestSectionToolsE2E:
         assert background_heading is not None
 
         # Export Introduction content (to compare later)
-        intro_before = export_section(
+        intro_before = read_section(
             document_id=test_document, anchor_id=intro_heading["anchor_id"], tab_id=""
         )
         assert intro_before["success"] is True
 
         # Modify Background section
         new_background = f"## {{^ {background_heading['anchor_id']}}}Background\n\nCompletely new background.\n"
-        import_result = import_section(
+        import_result = write_section(
             document_id=test_document,
             anchor_id=background_heading["anchor_id"],
             content=new_background,
@@ -304,7 +304,7 @@ class TestSectionToolsE2E:
         assert import_result["success"] is True
 
         # Verify Introduction was NOT modified
-        intro_after = export_section(
+        intro_after = read_section(
             document_id=test_document, anchor_id=intro_heading["anchor_id"], tab_id=""
         )
         assert intro_after["success"] is True
@@ -319,11 +319,11 @@ class TestSectionToolsE2E:
 class TestTabToolsE2E:
     """E2E tests for tab tools."""
 
-    def test_export_tab_returns_full_content(self, real_mcp_server, test_document):
-        """Test export_tab returns complete document content."""
-        from extended_google_doc_utils.mcp.tools.tabs import export_tab
+    def test_read_tab_returns_full_content(self, real_mcp_server, test_document):
+        """Test read_tab returns complete document content."""
+        from extended_google_doc_utils.mcp.tools.tabs import read_tab
 
-        result = export_tab(document_id=test_document, tab_id="")
+        result = read_tab(document_id=test_document, tab_id="")
 
         assert result["success"] is True
         assert "content" in result
@@ -335,24 +335,24 @@ class TestTabToolsE2E:
         assert "Background" in content
         assert "Conclusion" in content
 
-    def test_import_tab_replaces_content(self, real_mcp_server, test_document):
-        """Test import_tab replaces entire tab content."""
-        from extended_google_doc_utils.mcp.tools.tabs import export_tab, import_tab
+    def test_write_tab_replaces_content(self, real_mcp_server, test_document):
+        """Test write_tab replaces entire tab content."""
+        from extended_google_doc_utils.mcp.tools.tabs import read_tab, write_tab
 
         # Export original content
-        original = export_tab(document_id=test_document, tab_id="")
+        original = read_tab(document_id=test_document, tab_id="")
         assert original["success"] is True
 
         # Import completely new content
         new_content = "# New Document\n\nThis is entirely new content.\n"
-        import_result = import_tab(
+        import_result = write_tab(
             document_id=test_document, content=new_content, tab_id=""
         )
 
         assert import_result["success"] is True
 
         # Verify content was replaced
-        verify = export_tab(document_id=test_document, tab_id="")
+        verify = read_tab(document_id=test_document, tab_id="")
         assert verify["success"] is True
         assert "New Document" in verify["content"]
         assert "entirely new content" in verify["content"]
@@ -422,9 +422,9 @@ class TestErrorHandlingE2E:
 
     def test_invalid_anchor_returns_error(self, real_mcp_server, test_document):
         """Test that invalid anchor ID returns proper error response."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
-        result = export_section(
+        result = read_section(
             document_id=test_document, anchor_id="h.nonexistent_anchor", tab_id=""
         )
 
@@ -452,8 +452,8 @@ class TestCompleteWorkflowE2E:
             list_documents,
         )
         from extended_google_doc_utils.mcp.tools.sections import (
-            export_section,
-            import_section,
+            read_section,
+            write_section,
         )
 
         # Step 1: Get document metadata
@@ -470,7 +470,7 @@ class TestCompleteWorkflowE2E:
         target_heading = hierarchy["headings"][0]
         anchor_id = target_heading["anchor_id"]
 
-        export_result = export_section(
+        export_result = read_section(
             document_id=test_document, anchor_id=anchor_id, tab_id=""
         )
         assert export_result["success"] is True
@@ -478,7 +478,7 @@ class TestCompleteWorkflowE2E:
 
         # Step 4: Import updated content for the section
         new_content = "## Updated Section\n\nThis section was modified by the LLM.\n"
-        import_result = import_section(
+        import_result = write_section(
             document_id=test_document,
             anchor_id=anchor_id,
             content=new_content,

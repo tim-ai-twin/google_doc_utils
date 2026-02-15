@@ -40,7 +40,7 @@ def sample_test_run():
             attempts=[
                 AttemptRecord(
                     sequence_position=1,
-                    tool_name="export_tab",
+                    tool_name="read_tab",
                     parameters={"document_id": "doc123"},
                     classification=Classification.WRONG_TOOL,
                 ),
@@ -64,7 +64,7 @@ def sample_test_run():
         max_attempts=10,
         tool_descriptions={
             "get_hierarchy": "Get heading structure",
-            "export_tab": "Export full tab content",
+            "read_tab": "Export full tab content",
             "list_documents": "List accessible documents",
         },
         results=[
@@ -87,7 +87,7 @@ def sample_test_run():
                                 as_first_call=1,
                             ),
                             DesirePathEntry(
-                                tool_name="export_tab",
+                                tool_name="read_tab",
                                 frequency=1,
                                 avg_position=1.0,
                                 as_first_call=1,
@@ -196,7 +196,7 @@ class TestGenerateReport:
                 attempts=[
                     AttemptRecord(
                         sequence_position=1,
-                        tool_name="export_tab",
+                        tool_name="read_tab",
                         parameters={},
                         classification=Classification.WRONG_TOOL,
                         input_tokens=8000,

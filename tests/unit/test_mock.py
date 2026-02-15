@@ -28,10 +28,10 @@ class TestGetMockResponse:
             "list_documents",
             "get_metadata",
             "get_hierarchy",
-            "export_section",
-            "import_section",
-            "export_tab",
-            "import_tab",
+            "read_section",
+            "write_section",
+            "read_tab",
+            "write_tab",
             "normalize_formatting",
             "extract_styles",
             "apply_styles",
@@ -53,8 +53,8 @@ class TestGetMockResponse:
         assert "document_id" in response["documents"][0]
         assert "title" in response["documents"][0]
 
-    def test_export_section_has_content(self):
-        response = get_mock_response("export_section", {"anchor_id": "h.abc123"})
+    def test_read_section_has_content(self):
+        response = get_mock_response("read_section", {"anchor_id": "h.abc123"})
         assert "content" in response
         assert len(response["content"]) > 0
         assert response["anchor_id"] == "h.abc123"

@@ -59,13 +59,13 @@ class TestNormalizeFormatting:
         from extended_google_doc_utils.mcp.tools.formatting import normalize_formatting
 
         # Configure mock to return content with embedded objects
-        mock_converter.export_tab.return_value = ExportResult(
+        mock_converter.read_tab.return_value = ExportResult(
             content="# Title\n\nSome text.\n\n{^= img123 image}\n\nMore text.",
             anchors=[],
             embedded_objects=["img123"],
             warnings=[],
         )
-        mock_converter.import_tab.return_value = ImportResult(
+        mock_converter.write_tab.return_value = ImportResult(
             success=True,
             requests=[],
             preserved_objects=["img123"],
@@ -85,7 +85,7 @@ class TestNormalizeFormatting:
         from extended_google_doc_utils.mcp.tools.formatting import normalize_formatting
 
         # Configure mock to raise exception
-        mock_converter.export_tab.side_effect = Exception("API error")
+        mock_converter.read_tab.side_effect = Exception("API error")
 
         result = normalize_formatting(
             document_id="invalid_doc",

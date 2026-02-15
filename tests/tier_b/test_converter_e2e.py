@@ -66,18 +66,18 @@ class TestGetHierarchyE2E:
 
 
 @pytest.mark.tier_b
-class TestExportE2E:
-    """E2E tests for document export."""
+class TestReadE2E:
+    """E2E tests for document read."""
 
-    def test_export_tab_full_document(self, google_credentials):
-        """Export entire document to MEBDF."""
+    def test_read_tab_full_document(self, google_credentials):
+        """Read entire document to MEBDF."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
         converter = GoogleDocsConverter(google_credentials)
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
-        result = converter.export_tab(tab_ref)
+        result = converter.read_tab(tab_ref)
 
         # Should have content
         assert result.content
@@ -89,15 +89,15 @@ class TestExportE2E:
         # Should have anchors
         assert len(result.anchors) > 0
 
-    def test_export_tab_preserves_formatting(self, google_credentials):
-        """Export preserves text formatting."""
+    def test_read_tab_preserves_formatting(self, google_credentials):
+        """Read preserves text formatting."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
         converter = GoogleDocsConverter(google_credentials)
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
-        result = converter.export_tab(tab_ref)
+        result = converter.read_tab(tab_ref)
 
         # Should have some formatting markers (bold, italic, etc.)
         # The test document contains formatted text
@@ -107,8 +107,8 @@ class TestExportE2E:
 
         assert has_bold or has_italic or has_formatting
 
-    def test_export_section_by_anchor(self, google_credentials):
-        """Export specific section by heading anchor."""
+    def test_read_section_by_anchor(self, google_credentials):
+        """Read specific section by heading anchor."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -123,7 +123,7 @@ class TestExportE2E:
         first_heading = hierarchy.headings[0]
 
         # Export that section
-        result = converter.export_section(tab_ref, first_heading.anchor_id)
+        result = converter.read_section(tab_ref, first_heading.anchor_id)
 
         # Should have content
         assert result.content
@@ -132,11 +132,11 @@ class TestExportE2E:
 
 
 @pytest.mark.tier_b
-class TestSectionExportE2E:
-    """E2E tests for section-level export."""
+class TestSectionReadE2E:
+    """E2E tests for section-level read."""
 
-    def test_export_preamble(self, google_credentials):
-        """Export document preamble (content before first heading)."""
+    def test_read_preamble(self, google_credentials):
+        """Read document preamble (content before first heading)."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -144,15 +144,15 @@ class TestSectionExportE2E:
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
         # Export preamble using empty anchor
-        result = converter.export_section(tab_ref, "")
+        result = converter.read_section(tab_ref, "")
 
         # Preamble may or may not have content depending on document
         # Just verify it doesn't crash
         assert result is not None
         assert hasattr(result, "content")
 
-    def test_export_subsection(self, google_credentials):
-        """Export a subsection (H2 or lower)."""
+    def test_read_subsection(self, google_credentials):
+        """Read a subsection (H2 or lower)."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -167,7 +167,7 @@ class TestSectionExportE2E:
             pytest.skip("No subsections in test document")
 
         subsection = subsections[0]
-        result = converter.export_section(tab_ref, subsection.anchor_id)
+        result = converter.read_section(tab_ref, subsection.anchor_id)
 
         assert result.content
         assert subsection.anchor_id in result.content
@@ -175,10 +175,10 @@ class TestSectionExportE2E:
 
 @pytest.mark.tier_b
 class TestRoundTripE2E:
-    """E2E tests for export round-trip consistency."""
+    """E2E tests for read round-trip consistency."""
 
-    def test_export_produces_parseable_mebdf(self, google_credentials):
-        """Exported MEBDF can be parsed back to AST."""
+    def test_read_produces_parseable_mebdf(self, google_credentials):
+        """Read MEBDF can be parsed back to AST."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -187,7 +187,7 @@ class TestRoundTripE2E:
         converter = GoogleDocsConverter(google_credentials)
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
-        result = converter.export_tab(tab_ref)
+        result = converter.read_tab(tab_ref)
         parser = MebdfParser()
 
         # Should parse without errors
@@ -196,8 +196,8 @@ class TestRoundTripE2E:
         # Should have children
         assert len(doc.children) > 0
 
-    def test_export_serialize_roundtrip(self, google_credentials):
-        """Export -> Parse -> Serialize produces consistent output."""
+    def test_read_serialize_roundtrip(self, google_credentials):
+        """Read -> Parse -> Serialize produces consistent output."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -207,7 +207,7 @@ class TestRoundTripE2E:
         converter = GoogleDocsConverter(google_credentials)
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
-        result = converter.export_tab(tab_ref)
+        result = converter.read_tab(tab_ref)
 
         parser = MebdfParser()
         serializer = MebdfSerializer()
@@ -225,11 +225,11 @@ class TestRoundTripE2E:
 
 
 @pytest.mark.tier_b
-class TestImportE2E:
-    """E2E tests for document import (read-only verification)."""
+class TestWriteE2E:
+    """E2E tests for document write (read-only verification)."""
 
-    def test_import_requests_structure(self, google_credentials):
-        """Verify import request building from MEBDF content."""
+    def test_write_requests_structure(self, google_credentials):
+        """Verify write request building from MEBDF content."""
         if google_credentials is None:
             pytest.skip("No credentials available")
 
@@ -243,7 +243,7 @@ class TestImportE2E:
         converter = GoogleDocsConverter(google_credentials)
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
-        result = converter.export_tab(tab_ref)
+        result = converter.read_tab(tab_ref)
 
         # Parse to AST
         parser = MebdfParser()
@@ -296,4 +296,4 @@ class TestEdgeCasesE2E:
         tab_ref = TabReference(document_id=TEST_DOCUMENT_ID, tab_id="")
 
         with pytest.raises(AnchorNotFoundError):
-            converter.export_section(tab_ref, "h.nonexistent_anchor_xyz")
+            converter.read_section(tab_ref, "h.nonexistent_anchor_xyz")

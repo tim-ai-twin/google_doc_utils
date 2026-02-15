@@ -36,7 +36,7 @@ def mock_credentials():
 @pytest.fixture
 def mock_converter(mock_credentials) -> MagicMock:
     """Create a mock GoogleDocsConverter for testing."""
-    converter = MagicMock(spec=["get_hierarchy", "export_tab", "export_section", "import_section", "import_tab", "list_documents", "get_metadata"])
+    converter = MagicMock(spec=["get_hierarchy", "read_tab", "read_section", "write_section", "write_tab", "list_documents", "get_metadata"])
 
     # Default mock responses
     from extended_google_doc_utils.converter.types import (
@@ -54,28 +54,28 @@ def mock_converter(mock_credentials) -> MagicMock:
         markdown="# {^ h.abc123}Introduction\n## {^ h.def456}Background\n",
     )
 
-    converter.export_tab.return_value = ExportResult(
+    converter.read_tab.return_value = ExportResult(
         content="# Introduction\n\nSome content here.\n\n## Background\n\nMore content.",
         anchors=[],
         embedded_objects=[],
         warnings=[],
     )
 
-    converter.export_section.return_value = ExportResult(
+    converter.read_section.return_value = ExportResult(
         content="## {^ h.def456}Background\n\nMore content.",
         anchors=[],
         embedded_objects=[],
         warnings=[],
     )
 
-    converter.import_section.return_value = ImportResult(
+    converter.write_section.return_value = ImportResult(
         success=True,
         requests=[],
         preserved_objects=[],
         warnings=[],
     )
 
-    converter.import_tab.return_value = ImportResult(
+    converter.write_tab.return_value = ImportResult(
         success=True,
         requests=[],
         preserved_objects=[],

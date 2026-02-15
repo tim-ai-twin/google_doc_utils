@@ -10,8 +10,8 @@ intents:
     expected_tools:
       - list_documents
       - get_hierarchy
-      - export_section
-      - import_section
+      - read_section
+      - write_section
     order_sensitive: true
     variants:
       - text: "Update the Weekly Status section in the Project Status Report to show this weeks data is still being calculated and will be available tomorrow"
@@ -20,7 +20,7 @@ intents:
         style: natural
       - text: "Edit the part under 'Budget Analysis' in the Project Status Report to say that the budget is now $100,000, and that includes a buffer for scope discovery."
         style: indirect
-      - text: "Something needs to change in the Project Status Report, the budget section doesn't look right"
+      - text: "Something needs to change in the Project Status Report, the budget section doesn't include a disclaimer about FX volatility"
         style: ambiguous
       - text: "In the Project Status Report, export the Budget Analysis, highlight the first line, then import it back after changes"
         style: explicit
@@ -29,7 +29,7 @@ intents:
     description: "Read the full content of a document"
     expected_tools:
       - list_documents
-      - export_tab
+      - read_tab
     order_sensitive: false
     variants:
       - text: "Show me what's in the Project Status Report"

@@ -66,7 +66,7 @@ _MOCK_RESPONSES: dict[str, dict[str, Any]] = {
             "# Next Steps\n"
         ),
     },
-    "export_section": {
+    "read_section": {
         "success": True,
         "content": (
             "# Weekly Status\n\n"
@@ -81,13 +81,13 @@ _MOCK_RESPONSES: dict[str, dict[str, Any]] = {
         "anchor_id": "h.def456",
         "warnings": [],
     },
-    "import_section": {
+    "write_section": {
         "success": True,
         "anchor_id": "h.def456",
         "preserved_objects": [],
         "warnings": [],
     },
-    "export_tab": {
+    "read_tab": {
         "success": True,
         "content": (
             "# Project Status Report\n\n"
@@ -103,7 +103,7 @@ _MOCK_RESPONSES: dict[str, dict[str, Any]] = {
         "tab_id": "t.0",
         "warnings": [],
     },
-    "import_tab": {
+    "write_tab": {
         "success": True,
         "tab_id": "t.0",
         "preserved_objects": [],
@@ -222,13 +222,13 @@ def get_mock_response(tool_name: str, parameters: dict[str, Any]) -> dict[str, A
     # Customize responses based on parameters where useful
     if tool_name == "get_metadata" and "document_id" in parameters:
         response = {**response, "document_id": parameters["document_id"]}
-    elif tool_name == "export_section" and "anchor_id" in parameters:
+    elif tool_name == "read_section" and "anchor_id" in parameters:
         response = {**response, "anchor_id": parameters["anchor_id"]}
-    elif tool_name == "import_section" and "anchor_id" in parameters:
+    elif tool_name == "write_section" and "anchor_id" in parameters:
         response = {**response, "anchor_id": parameters["anchor_id"]}
-    elif tool_name == "export_tab" and "tab_id" in parameters:
+    elif tool_name == "read_tab" and "tab_id" in parameters:
         response = {**response, "tab_id": parameters["tab_id"]}
-    elif tool_name == "import_tab" and "tab_id" in parameters:
+    elif tool_name == "write_tab" and "tab_id" in parameters:
         response = {**response, "tab_id": parameters["tab_id"]}
     elif tool_name == "get_document_styles" and "document_id" in parameters:
         response = {**response, "document_id": parameters["document_id"]}
