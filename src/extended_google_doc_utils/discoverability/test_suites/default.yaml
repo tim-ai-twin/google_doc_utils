@@ -1,0 +1,119 @@
+suite:
+  name: default
+  defaults:
+    trials: 1
+    max_attempts: 10
+
+intents:
+  - name: edit-section
+    description: "Edit a specific section of a document by heading"
+    expected_tools:
+      - list_documents
+      - get_hierarchy
+      - read_section
+      - write_section
+    order_sensitive: true
+    variants:
+      - text: "Update the Weekly Status section in the Project Status Report to show this weeks data is still being calculated and will be available tomorrow"
+        style: natural
+      - text: "I need to change the Introduction section in the Project Status Report to say that international rollout is paused until VP review next week"
+        style: natural
+      - text: "Edit the part under 'Budget Analysis' in the Project Status Report to say that the budget is now $100,000, and that includes a buffer for scope discovery."
+        style: indirect
+      - text: "Something needs to change in the Project Status Report, the budget section doesn't include a disclaimer about FX volatility"
+        style: ambiguous
+      - text: "In the Project Status Report, export the Budget Analysis, highlight the first line, then import it back after changes"
+        style: explicit
+
+  - name: read-document
+    description: "Read the full content of a document"
+    expected_tools:
+      - list_documents
+      - read_tab
+    order_sensitive: false
+    variants:
+      - text: "Show me what's in the Project Status Report"
+        style: natural
+      - text: "I want to read the contents of the Meeting Notes"
+        style: natural
+      - text: "What does the Company Style Guide say?"
+        style: indirect
+      - text: "Can you get me the text from the Q1 Planning notes?"
+        style: ambiguous
+      - text: "Export the full content of the Project Status Report"
+        style: explicit
+
+  - name: cleanup-formatting
+    description: "Normalize formatting in a document for consistency"
+    expected_tools:
+      - list_documents
+      - normalize_formatting
+    order_sensitive: false
+    variants:
+      - text: "Clean up the formatting in the Project Status Report so it looks consistent"
+        style: natural
+      - text: "The fonts and spacing in the Meeting Notes are all over the place, fix them"
+        style: natural
+      - text: "Make everything in the Meeting Notes use the same style"
+        style: indirect
+      - text: "The Project Status Report looks inconsistent, please fix it"
+        style: ambiguous
+      - text: "Normalize the formatting of the Project Status Report with Arial 11pt body text"
+        style: explicit
+
+  - name: transfer-styles
+    description: "Apply formatting styles from one document to another"
+    expected_tools:
+      - list_documents
+      - apply_document_styles
+    expected_tools_alt:
+      - - list_documents
+        - extract_styles
+        - apply_styles
+    order_sensitive: false
+    variants:
+      - text: "Make the Project Status Report look like the Company Style Guide"
+        style: natural
+      - text: "Apply the styles from the Company Style Guide to the Meeting Notes"
+        style: natural
+      - text: "Copy the formatting from the Company Style Guide to the Project Status Report"
+        style: indirect
+      - text: "The Meeting Notes fonts and heading styles should match the Company Style Guide"
+        style: ambiguous
+      - text: "Transfer the document-level styles from the Company Style Guide to the Project Status Report"
+        style: explicit
+
+  - name: find-document
+    description: "Find a Google Doc by name or search query"
+    expected_tools:
+      - list_documents
+    order_sensitive: false
+    variants:
+      - text: "Find my project status report"
+        style: natural
+      - text: "I'm looking for a document called 'Q1 Planning'"
+        style: natural
+      - text: "Which documents do I have access to?"
+        style: indirect
+      - text: "I need to find a doc, I think it had 'planning' in the name"
+        style: ambiguous
+      - text: "List documents matching the query 'budget' with max 10 results"
+        style: explicit
+
+  - name: understand-structure
+    description: "Understand the heading structure and organization of a document"
+    expected_tools:
+      - list_documents
+      - get_hierarchy
+    order_sensitive: false
+    variants:
+      - text: "What sections does the Project Status Report have?"
+        style: natural
+      - text: "Show me the outline of the Meeting Notes"
+        style: natural
+      - text: "I want to see how the Company Style Guide is organized"
+        style: indirect
+      - text: "I'm not sure what's in the Project Status Report"
+        style: ambiguous
+      - text: "Get the heading hierarchy of the Project Status Report"
+        style: explicit

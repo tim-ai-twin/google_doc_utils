@@ -114,13 +114,13 @@ def export_body(
     )
 
 
-def export_section(
+def read_section(
     document: dict[str, Any],
     body: dict[str, Any],
     tab_id: str,
     section: Section,
 ) -> ExportResult:
-    """Export a specific section to MEBDF.
+    """Read a specific section to MEBDF.
 
     Args:
         document: Full document from API.

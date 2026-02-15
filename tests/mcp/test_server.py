@@ -56,10 +56,10 @@ class TestToolDiscovery:
             "get_hierarchy",
             "list_documents",
             "get_metadata",
-            "export_section",
-            "import_section",
-            "export_tab",
-            "import_tab",
+            "read_section",
+            "write_section",
+            "read_tab",
+            "write_tab",
             "normalize_formatting",
             "extract_styles",
             "apply_styles",
@@ -73,16 +73,16 @@ class TestToolDiscovery:
     def test_tools_return_structured_responses(self, initialized_mcp_server, mock_converter):
         """Test that tools return dict responses with success field."""
         from extended_google_doc_utils.mcp.tools.navigation import get_hierarchy
-        from extended_google_doc_utils.mcp.tools.sections import export_section, import_section
-        from extended_google_doc_utils.mcp.tools.tabs import export_tab, import_tab
+        from extended_google_doc_utils.mcp.tools.sections import read_section, write_section
+        from extended_google_doc_utils.mcp.tools.tabs import read_tab, write_tab
 
         # Test each tool returns structured response
         tools_to_test = [
             lambda: get_hierarchy(document_id="test", tab_id=""),
-            lambda: export_section(document_id="test", anchor_id="h.123", tab_id=""),
-            lambda: import_section(document_id="test", anchor_id="h.123", content="# Test", tab_id=""),
-            lambda: export_tab(document_id="test", tab_id=""),
-            lambda: import_tab(document_id="test", content="# Test", tab_id=""),
+            lambda: read_section(document_id="test", anchor_id="h.123", tab_id=""),
+            lambda: write_section(document_id="test", anchor_id="h.123", content="# Test", tab_id=""),
+            lambda: read_tab(document_id="test", tab_id=""),
+            lambda: write_tab(document_id="test", content="# Test", tab_id=""),
         ]
 
         for tool_fn in tools_to_test:

@@ -1,8 +1,8 @@
 """Tests for MCP section tools.
 
 Tests for:
-- export_section tool
-- import_section tool
+- read_section tool
+- write_section tool
 - Section round-trip (isolation guarantee)
 """
 
@@ -19,14 +19,14 @@ from extended_google_doc_utils.converter.types import (
 
 
 class TestExportSection:
-    """Contract tests for export_section tool."""
+    """Contract tests for read_section tool."""
 
     @pytest.mark.tier_b
-    def test_export_section_returns_success_response(self, initialized_mcp_server, mock_converter):
-        """Test that export_section returns a successful response structure."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+    def test_read_section_returns_success_response(self, initialized_mcp_server, mock_converter):
+        """Test that read_section returns a successful response structure."""
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
-        result = export_section(
+        result = read_section(
             document_id="test_doc_123",
             anchor_id="h.abc123",
             tab_id=""
@@ -38,11 +38,11 @@ class TestExportSection:
         assert "warnings" in result
 
     @pytest.mark.tier_b
-    def test_export_section_returns_mebdf_content(self, initialized_mcp_server, mock_converter):
-        """Test that export_section returns MEBDF markdown content."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+    def test_read_section_returns_mebdf_content(self, initialized_mcp_server, mock_converter):
+        """Test that read_section returns MEBDF markdown content."""
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
-        result = export_section(
+        result = read_section(
             document_id="test_doc_123",
             anchor_id="h.def456",
             tab_id=""
@@ -52,12 +52,12 @@ class TestExportSection:
         assert result["content"]  # Non-empty
 
     @pytest.mark.tier_b
-    def test_export_section_echoes_anchor_id(self, initialized_mcp_server, mock_converter):
-        """Test that export_section echoes back the anchor_id."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+    def test_read_section_echoes_anchor_id(self, initialized_mcp_server, mock_converter):
+        """Test that read_section echoes back the anchor_id."""
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
         anchor = "h.specific123"
-        result = export_section(
+        result = read_section(
             document_id="test_doc_123",
             anchor_id=anchor,
             tab_id=""
@@ -66,15 +66,15 @@ class TestExportSection:
         assert result["anchor_id"] == anchor
 
     @pytest.mark.tier_b
-    def test_export_section_handles_anchor_not_found(self, initialized_mcp_server, mock_converter):
-        """Test that export_section returns structured error for invalid anchor."""
+    def test_read_section_handles_anchor_not_found(self, initialized_mcp_server, mock_converter):
+        """Test that read_section returns structured error for invalid anchor."""
         from extended_google_doc_utils.converter.exceptions import AnchorNotFoundError
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
         # Configure mock to raise exception
-        mock_converter.export_section.side_effect = AnchorNotFoundError("h.invalid")
+        mock_converter.read_section.side_effect = AnchorNotFoundError("h.invalid")
 
-        result = export_section(
+        result = read_section(
             document_id="test_doc_123",
             anchor_id="h.invalid",
             tab_id=""
@@ -86,11 +86,11 @@ class TestExportSection:
         assert "suggestion" in result["error"]
 
     @pytest.mark.tier_b
-    def test_export_section_preamble_with_empty_anchor(self, initialized_mcp_server, mock_converter):
-        """Test that export_section handles empty anchor_id for preamble."""
-        from extended_google_doc_utils.mcp.tools.sections import export_section
+    def test_read_section_preamble_with_empty_anchor(self, initialized_mcp_server, mock_converter):
+        """Test that read_section handles empty anchor_id for preamble."""
+        from extended_google_doc_utils.mcp.tools.sections import read_section
 
-        result = export_section(
+        result = read_section(
             document_id="test_doc_123",
             anchor_id="",  # Empty = preamble
             tab_id=""
@@ -101,14 +101,14 @@ class TestExportSection:
 
 
 class TestImportSection:
-    """Contract tests for import_section tool."""
+    """Contract tests for write_section tool."""
 
     @pytest.mark.tier_b
-    def test_import_section_returns_success_response(self, initialized_mcp_server, mock_converter):
-        """Test that import_section returns a successful response structure."""
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+    def test_write_section_returns_success_response(self, initialized_mcp_server, mock_converter):
+        """Test that write_section returns a successful response structure."""
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id="h.abc123",
             content="## Updated Section\n\nNew content here.",
@@ -121,12 +121,12 @@ class TestImportSection:
         assert "warnings" in result
 
     @pytest.mark.tier_b
-    def test_import_section_echoes_anchor_id(self, initialized_mcp_server, mock_converter):
-        """Test that import_section echoes back the anchor_id."""
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+    def test_write_section_echoes_anchor_id(self, initialized_mcp_server, mock_converter):
+        """Test that write_section echoes back the anchor_id."""
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
         anchor = "h.target123"
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id=anchor,
             content="## Section\n\nContent.",
@@ -136,15 +136,15 @@ class TestImportSection:
         assert result["anchor_id"] == anchor
 
     @pytest.mark.tier_b
-    def test_import_section_handles_anchor_not_found(self, initialized_mcp_server, mock_converter):
-        """Test that import_section returns structured error for invalid anchor."""
+    def test_write_section_handles_anchor_not_found(self, initialized_mcp_server, mock_converter):
+        """Test that write_section returns structured error for invalid anchor."""
         from extended_google_doc_utils.converter.exceptions import AnchorNotFoundError
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
         # Configure mock to raise exception
-        mock_converter.import_section.side_effect = AnchorNotFoundError("h.invalid")
+        mock_converter.write_section.side_effect = AnchorNotFoundError("h.invalid")
 
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id="h.invalid",
             content="## Section\n\nContent.",
@@ -156,15 +156,15 @@ class TestImportSection:
         assert result["error"]["type"] == "AnchorNotFoundError"
 
     @pytest.mark.tier_b
-    def test_import_section_handles_mebdf_parse_error(self, initialized_mcp_server, mock_converter):
-        """Test that import_section returns structured error for invalid MEBDF."""
+    def test_write_section_handles_mebdf_parse_error(self, initialized_mcp_server, mock_converter):
+        """Test that write_section returns structured error for invalid MEBDF."""
         from extended_google_doc_utils.converter.exceptions import MebdfParseError
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
         # Configure mock to raise exception
-        mock_converter.import_section.side_effect = MebdfParseError("Invalid syntax")
+        mock_converter.write_section.side_effect = MebdfParseError("Invalid syntax")
 
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id="h.abc123",
             content="Invalid {!broken content",
@@ -186,12 +186,12 @@ class TestSectionRoundTrip:
         This is the core isolation guarantee of the section editing feature.
         """
         from extended_google_doc_utils.mcp.tools.sections import (
-            export_section,
-            import_section,
+            read_section,
+            write_section,
         )
 
         # Export a section
-        export_result = export_section(
+        export_result = read_section(
             document_id="test_doc_123",
             anchor_id="h.section1",
             tab_id=""
@@ -200,7 +200,7 @@ class TestSectionRoundTrip:
 
         # Modify and import back
         modified_content = export_result["content"] + "\n\nAdded paragraph."
-        import_result = import_section(
+        import_result = write_section(
             document_id="test_doc_123",
             anchor_id="h.section1",
             content=modified_content,
@@ -209,12 +209,12 @@ class TestSectionRoundTrip:
         assert import_result["success"] is True
 
         # Verify the converter was called with correct parameters
-        mock_converter.import_section.assert_called()
+        mock_converter.write_section.assert_called()
 
     @pytest.mark.tier_b
     def test_section_roundtrip_with_rich_content(self, initialized_mcp_server, mock_converter):
         """Test that rich content (links, formatting) survives round-trip."""
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
         # MEBDF content with various formatting
         rich_content = """## {^ h.rich}Rich Section
@@ -229,7 +229,7 @@ Here's a [link](https://example.com) to follow.
 - Bullet point two
 """
 
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id="h.rich",
             content=rich_content,
@@ -242,10 +242,10 @@ Here's a [link](https://example.com) to follow.
     def test_section_roundtrip_preserves_image_placeholders(self, initialized_mcp_server, mock_converter):
         """Test that image placeholders are preserved during import."""
         from extended_google_doc_utils.converter.types import ImportResult
-        from extended_google_doc_utils.mcp.tools.sections import import_section
+        from extended_google_doc_utils.mcp.tools.sections import write_section
 
         # Configure mock to return preserved objects
-        mock_converter.import_section.return_value = ImportResult(
+        mock_converter.write_section.return_value = ImportResult(
             success=True,
             requests=[],
             preserved_objects=["obj123", "obj456"],
@@ -261,7 +261,7 @@ Some text before the image.
 Text after the image.
 """
 
-        result = import_section(
+        result = write_section(
             document_id="test_doc_123",
             anchor_id="h.withimage",
             content=content_with_image,

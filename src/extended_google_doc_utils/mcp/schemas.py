@@ -118,8 +118,8 @@ class HierarchyResponse:
 
 
 @dataclass
-class ExportSectionResponse:
-    """Response from export_section tool.
+class ReadSectionResponse:
+    """Response from read_section tool.
 
     Attributes:
         success: Whether the operation succeeded.
@@ -135,8 +135,8 @@ class ExportSectionResponse:
 
 
 @dataclass
-class ImportSectionResponse:
-    """Response from import_section tool.
+class WriteSectionResponse:
+    """Response from write_section tool.
 
     Attributes:
         success: Whether the operation succeeded.
@@ -157,8 +157,8 @@ class ImportSectionResponse:
 
 
 @dataclass
-class ExportTabResponse:
-    """Response from export_tab tool.
+class ReadTabResponse:
+    """Response from read_tab tool.
 
     Attributes:
         success: Whether the operation succeeded.
@@ -174,8 +174,8 @@ class ExportTabResponse:
 
 
 @dataclass
-class ImportTabResponse:
-    """Response from import_tab tool.
+class WriteTabResponse:
+    """Response from write_tab tool.
 
     Attributes:
         success: Whether the operation succeeded.

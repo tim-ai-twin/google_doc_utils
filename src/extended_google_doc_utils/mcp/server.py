@@ -182,10 +182,10 @@ def register_tools() -> None:
     # Navigation tools: list_documents, get_metadata, get_hierarchy
     from extended_google_doc_utils.mcp.tools import navigation  # noqa: F401
 
-    # Section tools: export_section, import_section
+    # Section tools: read_section, write_section
     from extended_google_doc_utils.mcp.tools import sections  # noqa: F401
 
-    # Tab tools: export_tab, import_tab
+    # Tab tools: read_tab, write_tab
     from extended_google_doc_utils.mcp.tools import tabs  # noqa: F401
 
     # Formatting tools: normalize_formatting, extract_styles, apply_styles

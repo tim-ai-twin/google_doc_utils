@@ -76,7 +76,7 @@ def normalize_formatting(
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
         # 1. Export document to MEBDF
-        export_result = converter.export_tab(tab)
+        export_result = converter.read_tab(tab)
         content = export_result.content
         warnings = list(export_result.warnings)
 
@@ -91,7 +91,7 @@ def normalize_formatting(
         )
 
         # 3. Import back to Google Doc
-        import_result = converter.import_tab(tab, transformed_content)
+        import_result = converter.write_tab(tab, transformed_content)
         warnings.extend(import_result.warnings)
 
         response = NormalizeFormattingResponse(
@@ -225,7 +225,7 @@ def extract_styles(
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
         # Export document to MEBDF
-        export_result = converter.export_tab(tab)
+        export_result = converter.read_tab(tab)
         content = export_result.content
 
         # Extract styles from the MEBDF content
@@ -353,7 +353,7 @@ def apply_styles(
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
         # Export document to MEBDF
-        export_result = converter.export_tab(tab)
+        export_result = converter.read_tab(tab)
         content = export_result.content
         warnings = list(export_result.warnings)
 
@@ -381,7 +381,7 @@ def apply_styles(
         )
 
         # Import back to Google Doc
-        import_result = converter.import_tab(tab, transformed_content)
+        import_result = converter.write_tab(tab, transformed_content)
         warnings.extend(import_result.warnings)
 
         response = ApplyStylesResponse(

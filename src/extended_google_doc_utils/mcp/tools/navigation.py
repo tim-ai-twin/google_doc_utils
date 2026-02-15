@@ -37,7 +37,7 @@ def get_hierarchy(
     """Get the heading structure of a document tab.
 
     Returns headings with anchor IDs needed for section operations.
-    Call this BEFORE using export_section or import_section to find
+    Call this BEFORE using read_section or write_section to find
     the anchor_id for your target section.
 
     Args:

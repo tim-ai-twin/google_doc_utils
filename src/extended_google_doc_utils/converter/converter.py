@@ -36,8 +36,8 @@ class GoogleDocsConverter:
     This is the main public API for the converter library. It provides
     methods for:
     - Getting document hierarchy (headings with anchor IDs)
-    - Exporting tabs or sections to MEBDF markdown
-    - Importing MEBDF markdown to tabs or sections
+    - Reading tabs or sections to MEBDF markdown
+    - Writing MEBDF markdown to tabs or sections
 
     Example:
         ```python
@@ -50,8 +50,8 @@ class GoogleDocsConverter:
         hierarchy = converter.get_hierarchy(tab)
         print(hierarchy.markdown)
 
-        # Export full tab
-        result = converter.export_tab(tab)
+        # Read full tab
+        result = converter.read_tab(tab)
         print(result.content)
         ```
     """
@@ -215,11 +215,11 @@ class GoogleDocsConverter:
         return _get_hierarchy(body)
 
     # -------------------------------------------------------------------------
-    # Export Operations (Google Docs -> MEBDF)
+    # Read Operations (Google Docs -> MEBDF)
     # -------------------------------------------------------------------------
 
-    def export_tab(self, tab: TabReference) -> ExportResult:
-        """Export entire tab to MEBDF markdown.
+    def read_tab(self, tab: TabReference) -> ExportResult:
+        """Read entire tab to MEBDF markdown.
 
         Args:
             tab: Reference to the document tab.
@@ -239,8 +239,8 @@ class GoogleDocsConverter:
 
         return export_body(document, body, tab_id)
 
-    def export_section(self, tab: TabReference, anchor_id: str) -> ExportResult:
-        """Export a specific section to MEBDF markdown.
+    def read_section(self, tab: TabReference, anchor_id: str) -> ExportResult:
+        """Read a specific section to MEBDF markdown.
 
         The section includes content from the heading through all subsections
         until the next heading of equal or higher level.
@@ -257,7 +257,7 @@ class GoogleDocsConverter:
             AnchorNotFoundError: If anchor_id doesn't exist in the document.
         """
         # Import here to avoid circular imports
-        from extended_google_doc_utils.converter.gdoc_to_mebdf import export_section
+        from extended_google_doc_utils.converter.gdoc_to_mebdf import read_section
         from extended_google_doc_utils.converter.section_utils import find_section
 
         document = self._get_document(tab.document_id)
@@ -269,14 +269,14 @@ class GoogleDocsConverter:
         if section is None:
             raise AnchorNotFoundError(anchor_id)
 
-        return export_section(document, body, tab_id, section)
+        return read_section(document, body, tab_id, section)
 
     # -------------------------------------------------------------------------
-    # Import Operations (MEBDF -> Google Docs)
+    # Write Operations (MEBDF -> Google Docs)
     # -------------------------------------------------------------------------
 
-    def import_tab(self, tab: TabReference, content: str) -> ImportResult:
-        """Import MEBDF markdown to replace entire tab content.
+    def write_tab(self, tab: TabReference, content: str) -> ImportResult:
+        """Write MEBDF markdown to replace entire tab content.
 
         Args:
             tab: Reference to the document tab.
@@ -319,10 +319,10 @@ class GoogleDocsConverter:
             success=True, requests=requests, preserved_objects=preserved, warnings=warnings
         )
 
-    def import_section(
+    def write_section(
         self, tab: TabReference, anchor_id: str, content: str
     ) -> ImportResult:
-        """Import MEBDF markdown to replace a specific section.
+        """Write MEBDF markdown to replace a specific section.
 
         Only the target section is modified; content before and after
         remains unchanged.

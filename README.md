@@ -70,10 +70,10 @@ Replace `/path/to/google_doc_utils` with your actual installation path.
 | `list_documents` | List Google Docs accessible to the user |
 | `get_metadata` | Get document metadata including tabs |
 | `get_hierarchy` | Get heading structure with anchor IDs |
-| `export_section` | Export a section to markdown |
-| `import_section` | Replace a section's content (other sections unchanged) |
-| `export_tab` | Export entire tab to markdown |
-| `import_tab` | Replace entire tab content |
+| `read_section` | Read a section to markdown |
+| `write_section` | Replace a section's content (other sections unchanged) |
+| `read_tab` | Read entire tab to markdown |
+| `write_tab` | Replace entire tab content |
 | `normalize_formatting` | Apply consistent fonts/styles |
 | `extract_styles` | Extract formatting from a document |
 | `apply_styles` | Apply extracted styles to another document |
