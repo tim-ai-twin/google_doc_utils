@@ -5,6 +5,10 @@ from pathlib import Path
 
 import pytest
 
+# Test document IDs
+MULTI_TAB_DOCUMENT_ID = "1iRhQ21xWUJ9GIrn-G_67_gBth5e4s_tBA2Vp8hOb0a0"
+"""Multi-tab test document with 3 tabs: Alabama, Britain, California."""
+
 
 def pytest_configure(config):
     """Register custom pytest markers."""

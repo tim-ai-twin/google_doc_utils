@@ -198,6 +198,41 @@ class FontValidationError(MCPError):
         )
 
 
+def map_converter_error(
+    error: Exception, document_id: str
+) -> ErrorResponse | None:
+    """Map converter-layer exceptions to MCP error responses.
+
+    Returns an ErrorResponse if the error is a known converter exception,
+    or None if it should be handled by the caller.
+    """
+    from extended_google_doc_utils.converter import exceptions as conv_exc
+
+    if isinstance(error, conv_exc.TabNotFoundError):
+        return TabNotFoundError(
+            document_id, error.tab_id
+        ).to_error_response()
+    if isinstance(error, conv_exc.MultipleTabsError):
+        return MultipleTabsError(
+            document_id, error.tab_count
+        ).to_error_response()
+    if isinstance(error, conv_exc.AnchorNotFoundError):
+        return AnchorNotFoundError(
+            document_id, error.anchor_id
+        ).to_error_response()
+    if isinstance(error, conv_exc.MebdfParseError):
+        return MebdfParseError(str(error)).to_error_response()
+    if isinstance(error, conv_exc.FontValidationError):
+        return FontValidationError(
+            error.error_code,
+            str(error),
+            error.font_name,
+            error.weight,
+            error.suggestions,
+        ).to_error_response()
+    return None
+
+
 def create_error_response(error: Exception) -> ErrorResponse:
     """Create a structured error response from any exception.
 

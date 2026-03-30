@@ -103,7 +103,9 @@ class GoogleDocsConverter:
         Returns:
             The document resource from the API.
         """
-        return self.service.documents().get(documentId=document_id).execute()
+        return self.service.documents().get(
+            documentId=document_id, includeTabsContent=True
+        ).execute()
 
     # -------------------------------------------------------------------------
     # Discovery Operations

@@ -15,8 +15,8 @@ from pydantic import Field
 
 from extended_google_doc_utils.converter.types import TabReference
 from extended_google_doc_utils.mcp.errors import (
-    MultipleTabsError,
     create_error_response,
+    map_converter_error,
 )
 from extended_google_doc_utils.mcp.schemas import (
     DocumentMetadata,
@@ -93,12 +93,10 @@ def _handle_navigation_error(
     error: Exception, document_id: str, tab_id: str
 ) -> Any:
     """Convert converter exceptions to MCP error responses."""
-    from extended_google_doc_utils.converter import exceptions as conv_exc
-
-    if isinstance(error, conv_exc.MultipleTabsError):
-        return MultipleTabsError(document_id, error.tab_count).to_error_response()
-    else:
-        return create_error_response(error)
+    return (
+        map_converter_error(error, document_id)
+        or create_error_response(error)
+    )
 
 
 @mcp.tool()
