@@ -1,7 +1,7 @@
-"""MEBDF Serializer - Convert AST back to MEBDF markdown string.
+"""Plain Markdown Serializer - Convert AST to standard markdown without MEBDF markers.
 
-This module converts the AST produced by MebdfParser back into
-valid MEBDF markdown text.
+This module converts the AST produced by MebdfParser into plain/standard
+markdown, stripping all MEBDF-specific syntax ({!...}{/!}, {^ ...}, {^= ...}).
 """
 
 from __future__ import annotations
@@ -25,17 +25,17 @@ from extended_google_doc_utils.converter.mebdf_parser import (
 )
 
 
-class MebdfSerializer:
-    """Serialize AST back to MEBDF markdown string."""
+class PlainMarkdownSerializer:
+    """Serialize AST to plain/standard markdown, stripping MEBDF markers."""
 
     def serialize(self, document: DocumentNode) -> str:
-        """Serialize AST back to MEBDF string.
+        """Serialize AST to plain markdown string.
 
         Args:
             document: Root document node.
 
         Returns:
-            MEBDF markdown string.
+            Plain markdown string with no MEBDF markers.
         """
         parts: list[str] = []
 
@@ -47,7 +47,7 @@ class MebdfSerializer:
         return "\n\n".join(parts)
 
     def _serialize_node(self, node) -> str:
-        """Serialize a single AST node."""
+        """Serialize a single AST node to plain markdown."""
         if isinstance(node, TextNode):
             return node.content
 
@@ -70,30 +70,25 @@ class MebdfSerializer:
             return f"[{node.text}]({node.url})"
 
         elif isinstance(node, AnchorNode):
-            if node.anchor_id is None:
-                return "{^}"
-            return f"{{^ {node.anchor_id}}}"
+            # Strip anchors entirely in plain markdown
+            return ""
 
         elif isinstance(node, EmbeddedObjectNode):
-            if node.object_id is None:
-                return f"{{^= {node.object_type}}}"
-            return f"{{^= {node.object_id} {node.object_type}}}"
+            # Replace with placeholder
+            return "[image]"
 
         elif isinstance(node, FormattingNode):
-            props = self._serialize_properties(node.properties)
-            inner = self._serialize_inline_list(node.content)
-            return f"{{!{props}}}{inner}{{/!}}"
+            # Strip MEBDF formatting wrapper, emit child text only
+            return self._serialize_inline_list(node.content)
 
         elif isinstance(node, BlockFormattingNode):
-            props = self._serialize_properties(node.properties)
-            return f"{{!{props}}}"
+            # Strip block formatting directives entirely
+            return ""
 
         elif isinstance(node, HeadingNode):
             prefix = "#" * node.level
-            anchor = f"{{^ {node.anchor_id}}}" if node.anchor_id else ""
+            # No anchor marker in plain markdown
             content = self._serialize_inline_list(node.content)
-            if anchor:
-                return f"{prefix} {anchor}{content}"
             return f"{prefix} {content}"
 
         elif isinstance(node, ParagraphNode):
@@ -122,15 +117,3 @@ class MebdfSerializer:
     def _serialize_inline_list(self, nodes: list) -> str:
         """Serialize a list of inline nodes."""
         return "".join(self._serialize_node(node) for node in nodes)
-
-    def _serialize_properties(self, properties: dict[str, str | bool]) -> str:
-        """Serialize formatting properties to string."""
-        parts: list[str] = []
-        for key, value in properties.items():
-            if value is True:
-                parts.append(key)
-            elif value is False:
-                parts.append(f"{key}:false")
-            else:
-                parts.append(f"{key}:{value}")
-        return ", ".join(parts)

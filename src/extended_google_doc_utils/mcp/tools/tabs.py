@@ -31,34 +31,63 @@ from extended_google_doc_utils.mcp.server import get_converter, mcp
 def read_tab(
     document_id: Annotated[str, Field(description="Google Doc ID (from the document URL)")],
     tab_id: Annotated[str, Field(description="Tab ID for multi-tab documents. Leave empty for single-tab docs.")] = "",
+    format: Annotated[
+        str,
+        Field(
+            description=(
+                "Output format: 'mebdf' (default, full formatting)"
+                " or 'plain' (standard markdown, no MEBDF markers)"
+            )
+        ),
+    ] = "mebdf",
 ) -> dict[str, Any]:
-    """Read an entire document tab to MEBDF markdown.
+    """Read an entire document tab to MEBDF or plain markdown.
 
     Use this tool to read the FULL content of a document tab.
     For reading just one section, use read_section instead.
+
+    The ``format`` parameter controls the output representation:
+    - ``"mebdf"`` (default): Full MEBDF formatting with inline style markers,
+      anchor IDs, and image placeholders. Use this when you need to preserve
+      or edit formatting.
+    - ``"plain"``: Standard markdown without MEBDF markers. Use this for
+      large-document workflows where you want to save the content to disk
+      (e.g., ``/tmp/gdoc-{doc_id}-{tab_id}.md``) and search it with Grep
+      or Read tools to locate specific content before doing a targeted
+      section edit.
 
     Args:
         document_id: Google Doc ID (from the document URL).
         tab_id: Tab ID for multi-tab documents. Leave empty for single-tab docs.
                 Call get_metadata to find available tab IDs.
+        format: Output format - 'mebdf' (default, full formatting) or 'plain'
+                (standard markdown, no MEBDF markers). The default is 'mebdf'
+                for backward compatibility.
 
     Returns:
         dict containing:
         - success: True if operation succeeded
-        - content: Full MEBDF markdown content of the tab
+        - content: Full markdown content of the tab
         - tab_id: The resolved tab ID (useful if you passed empty string)
+        - format: The output format used
         - warnings: List of any non-fatal issues
     """
     try:
+        if format not in ("mebdf", "plain"):
+            return asdict(create_error_response(
+                ValueError(f"Invalid format '{format}'. Must be 'mebdf' or 'plain'.")
+            ))
+
         converter = get_converter()
         tab = TabReference(document_id=document_id, tab_id=tab_id)
 
-        result = converter.read_tab(tab)
+        result = converter.read_tab(tab, format=format)
 
         response = ReadTabResponse(
             success=True,
             content=result.content,
             tab_id=tab_id,
+            format=format,
             warnings=result.warnings,
         )
 

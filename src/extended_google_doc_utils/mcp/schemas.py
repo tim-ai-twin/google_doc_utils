@@ -90,11 +90,15 @@ class HeadingInfo:
         anchor_id: Heading anchor ID for use in section operations.
         level: Heading level (1-6 for H1-H6).
         text: Heading text content.
+        word_count: Words in this section (through next same-or-higher level heading).
+        char_count: Characters in this section (text only).
     """
 
     anchor_id: str
     level: int
     text: str
+    word_count: int = 0
+    char_count: int = 0
 
 
 @dataclass
@@ -105,11 +109,15 @@ class HierarchyResponse:
         success: Whether the operation succeeded.
         headings: List of headings with their anchors.
         markdown: Pure markdown representation of hierarchy.
+        total_word_count: Total words across all sections including preamble.
+        total_char_count: Total characters across all sections including preamble.
     """
 
     success: bool
     headings: list[HeadingInfo] = field(default_factory=list)
     markdown: str = ""
+    total_word_count: int = 0
+    total_char_count: int = 0
 
 
 # =============================================================================
@@ -162,14 +170,16 @@ class ReadTabResponse:
 
     Attributes:
         success: Whether the operation succeeded.
-        content: Full MEBDF markdown content.
+        content: Full markdown content (MEBDF or plain depending on format).
         tab_id: Echo back the resolved tab ID.
+        format: Echo back the requested format ("mebdf" or "plain").
         warnings: List of non-fatal issues encountered.
     """
 
     success: bool
     content: str = ""
     tab_id: str = ""
+    format: str = "mebdf"
     warnings: list[str] = field(default_factory=list)
 
 

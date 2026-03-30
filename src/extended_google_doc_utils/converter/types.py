@@ -56,12 +56,16 @@ class HeadingAnchor:
         level: Heading level 1-6.
         text: The heading text content.
         start_index: Character position in document.
+        word_count: Words in this section (through next same-or-higher level heading).
+        char_count: Characters in this section (text only, no markup).
     """
 
     anchor_id: str
     level: int
     text: str
     start_index: int = 0
+    word_count: int = 0
+    char_count: int = 0
 
 
 @dataclass
@@ -199,10 +203,14 @@ class HierarchyResult:
     Attributes:
         headings: List of headings with their anchors.
         markdown: Pure markdown representation (# lines with anchors).
+        total_word_count: Total words across all sections including preamble.
+        total_char_count: Total characters across all sections including preamble.
     """
 
     headings: list[HeadingAnchor] = field(default_factory=list)
     markdown: str = ""
+    total_word_count: int = 0
+    total_char_count: int = 0
 
 
 @dataclass
