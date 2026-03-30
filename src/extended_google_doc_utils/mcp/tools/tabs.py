@@ -17,10 +17,8 @@ from pydantic import Field
 
 from extended_google_doc_utils.converter.types import TabReference
 from extended_google_doc_utils.mcp.errors import (
-    FontValidationError as FontValidationMcpError,
-    MebdfParseError,
-    MultipleTabsError,
     create_error_response,
+    map_converter_error,
 )
 from extended_google_doc_utils.mcp.schemas import (
     ReadTabResponse,
@@ -149,21 +147,11 @@ def write_tab(
         return asdict(error_response)
 
 
-def _handle_tab_error(error: Exception, document_id: str, tab_id: str) -> Any:
+def _handle_tab_error(
+    error: Exception, document_id: str, tab_id: str
+) -> Any:
     """Convert converter exceptions to MCP error responses."""
-    from extended_google_doc_utils.converter import exceptions as conv_exc
-
-    if isinstance(error, conv_exc.MultipleTabsError):
-        return MultipleTabsError(document_id, error.tab_count).to_error_response()
-    elif isinstance(error, conv_exc.MebdfParseError):
-        return MebdfParseError(str(error)).to_error_response()
-    elif isinstance(error, conv_exc.FontValidationError):
-        return FontValidationMcpError(
-            error.error_code,
-            str(error),
-            error.font_name,
-            error.weight,
-            error.suggestions,
-        ).to_error_response()
-    else:
-        return create_error_response(error)
+    return (
+        map_converter_error(error, document_id)
+        or create_error_response(error)
+    )

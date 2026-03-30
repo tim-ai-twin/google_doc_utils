@@ -17,7 +17,6 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from extended_google_doc_utils.mcp.errors import (
-    MultipleTabsError,
     create_error_response,
 )
 from extended_google_doc_utils.mcp.schemas import (
