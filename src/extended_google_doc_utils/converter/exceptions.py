@@ -17,13 +17,45 @@ class MultipleTabsError(ConverterError):
 
     Attributes:
         tab_count: Number of tabs in the document.
+        available_tabs: List of (tab_id, title, index) tuples.
     """
 
-    def __init__(self, tab_count: int):
+    def __init__(
+        self,
+        tab_count: int,
+        available_tabs: list[tuple[str, str, int]] | None = None,
+    ):
         self.tab_count = tab_count
-        super().__init__(
-            f"Document has {tab_count} tabs. Specify tab_id to select one."
-        )
+        self.available_tabs = available_tabs or []
+        lines = [f"Document has {tab_count} tabs. Specify tab_id to select one."]
+        if self.available_tabs:
+            lines.append("Available tabs:")
+            for tab_id, title, index in self.available_tabs:
+                lines.append(f'  - tab_id="{tab_id}" title="{title}" (index {index})')
+        super().__init__("\n".join(lines))
+
+
+class TabNotFoundError(ConverterError):
+    """Raised when the specified tab_id does not exist in the document.
+
+    Attributes:
+        tab_id: The requested tab_id that was not found.
+        available_tabs: List of (tab_id, title, index) tuples.
+    """
+
+    def __init__(
+        self,
+        tab_id: str,
+        available_tabs: list[tuple[str, str, int]] | None = None,
+    ):
+        self.tab_id = tab_id
+        self.available_tabs = available_tabs or []
+        lines = [f'Tab "{tab_id}" not found in document.']
+        if self.available_tabs:
+            lines.append("Available tabs:")
+            for avail_id, title, index in self.available_tabs:
+                lines.append(f'  - tab_id="{avail_id}" title="{title}" (index {index})')
+        super().__init__("\n".join(lines))
 
 
 class AnchorNotFoundError(ConverterError):
