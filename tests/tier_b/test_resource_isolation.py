@@ -49,7 +49,7 @@ class TrackedResource:
         return self.cleanup_attempted and not self.cleanup_succeeded
 
 
-class TestResourceManager:
+class ResourceManager:
     """Manages test resource lifecycle with unique identifiers and cleanup.
 
     This implementation provides:
@@ -207,7 +207,7 @@ class TestResourceManager:
 
 @contextmanager
 def isolated_document(
-    manager: TestResourceManager,
+    manager: ResourceManager,
     title_prefix: str = "test-doc",
     test_name: str | None = None,
 ):
@@ -231,7 +231,7 @@ def isolated_document(
 
 @pytest.fixture
 def resource_manager(google_credentials):
-    """Create a TestResourceManager for Tier B tests.
+    """Create a ResourceManager for Tier B tests.
 
     Provides automatic cleanup after test completion.
 
@@ -239,7 +239,7 @@ def resource_manager(google_credentials):
         google_credentials: OAuth credentials fixture
 
     Yields:
-        TestResourceManager instance
+        ResourceManager instance
     """
     if google_credentials is None:
         pytest.skip("No credentials available for resource isolation test")
@@ -247,7 +247,7 @@ def resource_manager(google_credentials):
     docs_client = GoogleDocsClient(google_credentials)
     drive_client = GoogleDriveClient(google_credentials)
 
-    manager = TestResourceManager(docs_client, drive_client)
+    manager = ResourceManager(docs_client, drive_client)
     yield manager
 
     # Cleanup all resources after test (best effort)

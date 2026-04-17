@@ -130,12 +130,7 @@ uv sync
 
 3. (Optional) Install development dependencies:
 ```bash
-uv sync --group dev
-```
-
-4. (Optional) Install Google API dependencies for integration testing:
-```bash
-uv sync --group google
+uv sync --extra dev
 ```
 
 ## Testing
