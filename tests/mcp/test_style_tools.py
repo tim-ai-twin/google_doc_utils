@@ -251,23 +251,3 @@ class TestMcpErrorResponseFormat:
 
         assert response["success"] is False
         assert "permission denied" in str(response)
-
-
-# =============================================================================
-# T044: Integration test placeholder (requires real documents)
-# =============================================================================
-
-
-@pytest.mark.tier_b
-class TestMcpStyleToolsIntegration:
-    """Integration tests for MCP style tools (T044)."""
-
-    @pytest.mark.skip(reason="Requires real Google Docs credentials")
-    def test_get_document_styles_integration(self):
-        """Integration test for get_document_styles."""
-        pass
-
-    @pytest.mark.skip(reason="Requires real Google Docs credentials")
-    def test_apply_document_styles_integration(self):
-        """Integration test for apply_document_styles."""
-        pass
