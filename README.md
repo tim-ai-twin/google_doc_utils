@@ -63,7 +63,28 @@ Replace `/path/to/google_doc_utils` with your actual installation path.
 }
 ```
 
-### 4. Available Tools
+### 4. Install the Claude Code Agent (Optional)
+
+If you use Claude Code, install the Google Docs editing agent for efficient large-document workflows. This gives Claude an `@edit-google-doc` agent that handles document discovery, targeted section editing, and multi-tab search in its own context window.
+
+```bash
+# Install for all your projects (user scope):
+mkdir -p ~/.claude/agents ~/.claude/skills
+cp /path/to/google_doc_utils/.claude/agents/edit-google-doc.md ~/.claude/agents/
+cp /path/to/google_doc_utils/.claude/skills/edit-google-doc.md ~/.claude/skills/
+```
+
+Or for a single project:
+```bash
+# Install for the current project only:
+mkdir -p .claude/agents .claude/skills
+cp /path/to/google_doc_utils/.claude/agents/edit-google-doc.md .claude/agents/
+cp /path/to/google_doc_utils/.claude/skills/edit-google-doc.md .claude/skills/
+```
+
+Once installed, you can say things like "edit the introduction in my Google Doc" and Claude will automatically delegate to the agent.
+
+### 5. Available Tools
 
 | Tool | Description |
 |------|-------------|
@@ -109,12 +130,7 @@ uv sync
 
 3. (Optional) Install development dependencies:
 ```bash
-uv sync --group dev
-```
-
-4. (Optional) Install Google API dependencies for integration testing:
-```bash
-uv sync --group google
+uv sync --extra dev
 ```
 
 ## Testing

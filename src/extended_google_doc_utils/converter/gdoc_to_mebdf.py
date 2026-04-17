@@ -29,6 +29,7 @@ from extended_google_doc_utils.converter.mebdf_parser import (
     TextNode,
 )
 from extended_google_doc_utils.converter.mebdf_serializer import MebdfSerializer
+from extended_google_doc_utils.converter.plain_serializer import PlainMarkdownSerializer
 from extended_google_doc_utils.converter.tab_utils import (
     get_inline_objects,
     get_positioned_objects,
@@ -79,17 +80,19 @@ def _merge_text_style_dicts(
 
 
 def export_body(
-    document: dict[str, Any], body: dict[str, Any], tab_id: str
+    document: dict[str, Any], body: dict[str, Any], tab_id: str,
+    format: str = "mebdf",
 ) -> ExportResult:
-    """Export entire document body to MEBDF.
+    """Export entire document body to MEBDF or plain markdown.
 
     Args:
         document: Full document from API.
         body: Document body content.
         tab_id: Tab ID for object lookup.
+        format: Output format - "mebdf" (default) or "plain".
 
     Returns:
-        ExportResult with MEBDF content.
+        ExportResult with markdown content.
     """
     inline_objects = get_inline_objects(document, tab_id)
     positioned_objects = get_positioned_objects(document, tab_id)
@@ -103,11 +106,14 @@ def export_body(
         content_elements, inline_objects, positioned_objects, named_text_styles
     )
 
-    serializer = MebdfSerializer()
-    mebdf_content = serializer.serialize(ast)
+    if format == "plain":
+        serializer = PlainMarkdownSerializer()
+    else:
+        serializer = MebdfSerializer()
+    content = serializer.serialize(ast)
 
     return ExportResult(
-        content=mebdf_content,
+        content=content,
         anchors=anchors,
         embedded_objects=embedded,
         warnings=warnings,

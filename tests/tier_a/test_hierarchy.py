@@ -287,6 +287,108 @@ class TestGetHierarchy:
         assert "## {^ h.bg}Background" in result.markdown
 
 
+class TestPreambleEntry:
+    """Tests for the synthetic preamble entry in get_hierarchy output.
+
+    When a document has content before its first heading (or has no headings
+    at all), get_hierarchy surfaces a pseudo-entry with anchor_id="",
+    level=0, text="(preamble)" so LLMs can discover the empty anchor for
+    read_section / write_section.
+    """
+
+    @staticmethod
+    def _para(style: str, text: str, start: int, heading_id: str = "") -> dict:
+        para_style = {"namedStyleType": style}
+        if heading_id:
+            para_style["headingId"] = heading_id
+        return {
+            "paragraph": {
+                "paragraphStyle": para_style,
+                "elements": [{"textRun": {"content": f"{text}\n"}}],
+            },
+            "startIndex": start,
+            "endIndex": start + len(text) + 1,
+        }
+
+    def test_preamble_with_content_is_exposed(self):
+        """Pre-H1 paragraphs produce a level=0 entry as the first heading."""
+        body = {
+            "content": [
+                self._para("NORMAL_TEXT", "Intro paragraph before heading", 1),
+                self._para("HEADING_1", "First Section", 35, heading_id="h.s1"),
+                self._para("NORMAL_TEXT", "Body of section one", 55),
+            ]
+        }
+        result = get_hierarchy(body)
+
+        assert len(result.headings) == 2
+        preamble = result.headings[0]
+        assert preamble.anchor_id == ""
+        assert preamble.level == 0
+        assert preamble.text == "(preamble)"
+        assert preamble.word_count > 0
+        assert preamble.char_count > 0
+
+        first_h1 = result.headings[1]
+        assert first_h1.level == 1
+        assert first_h1.anchor_id == "h.s1"
+
+    def test_empty_preamble_not_exposed(self):
+        """Doc starting directly with a heading produces no preamble entry."""
+        body = {
+            "content": [
+                self._para("HEADING_1", "First Section", 1, heading_id="h.s1"),
+                self._para("NORMAL_TEXT", "Body content", 20),
+            ]
+        }
+        result = get_hierarchy(body)
+
+        assert len(result.headings) == 1
+        assert result.headings[0].level == 1
+        assert all(h.level != 0 for h in result.headings)
+
+    def test_title_only_doc_exposes_preamble(self):
+        """Doc with zero headings (all NORMAL_TEXT / TITLE) exposes preamble only.
+
+        This reproduces the bug seen on the Hummingbird tab: the entire
+        body is NORMAL_TEXT, so get_hierarchy previously returned [].
+        """
+        body = {
+            "content": [
+                self._para("TITLE", "My Document", 1),
+                self._para("NORMAL_TEXT", "Some leading body text", 15),
+                self._para("NORMAL_TEXT", "More body text", 40),
+            ]
+        }
+        result = get_hierarchy(body)
+
+        assert len(result.headings) == 1
+        preamble = result.headings[0]
+        assert preamble.anchor_id == ""
+        assert preamble.level == 0
+        assert preamble.text == "(preamble)"
+        assert preamble.word_count > 0
+
+    def test_format_hierarchy_renders_preamble_marker(self):
+        """format_hierarchy emits '{^ }(preamble) (N words)' for level=0."""
+        headings = [
+            HeadingAnchor(
+                anchor_id="",
+                level=0,
+                text="(preamble)",
+                start_index=1,
+                word_count=42,
+                char_count=210,
+            ),
+            HeadingAnchor("h.s1", 1, "First Section", 60, word_count=100),
+        ]
+        markdown = format_hierarchy(headings)
+
+        lines = markdown.split("\n")
+        assert lines[0] == "{^ }(preamble) (42 words)"
+        assert lines[1].startswith("# {^ h.s1}First Section")
+
+
 class TestTabUtils:
     """Tests for tab resolution utilities."""
 

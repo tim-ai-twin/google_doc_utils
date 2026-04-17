@@ -34,11 +34,29 @@ def get_hierarchy(
     document_id: Annotated[str, Field(description="Google Doc ID (the long string after '/d/' in the URL)")],
     tab_id: Annotated[str, Field(description="Tab ID for multi-tab documents. Leave empty for single-tab docs.")] = "",
 ) -> dict[str, Any]:
-    """Get the heading structure of a document tab.
+    """Get the heading structure of a document tab with word counts.
 
     Returns headings with anchor IDs needed for section operations.
     Call this BEFORE using read_section or write_section to find
     the anchor_id for your target section.
+
+    If the tab contains content before the first heading (or has no
+    headings at all), the first entry will be a preamble pseudo-entry:
+    ``anchor_id=""``, ``level=0``, ``text="(preamble)"``. Pass the empty
+    anchor to ``read_section`` / ``write_section`` to target that region.
+
+    Each heading includes ``word_count`` and ``char_count`` for the content
+    under that section (up to the next heading of equal or higher level).
+    The response also includes ``total_word_count`` and ``total_char_count``
+    for the entire tab. Use these counts to:
+    - Judge section size before deciding what to read
+    - Get an overview of tab size to choose between reading the full tab
+      vs. reading individual sections (e.g., skip full-tab export for
+      documents under 2000 words)
+    - Identify the largest sections in a document
+
+    This is especially useful for large documents where you want to avoid
+    reading unnecessary content and instead target only the relevant section.
 
     Args:
         document_id: Google Doc ID (the long string after '/d/' in the URL).
@@ -48,17 +66,26 @@ def get_hierarchy(
     Returns:
         dict containing:
         - success: True if operation succeeded
-        - headings: List of headings with anchor_id, level (1-6), and text
+        - headings: List of headings with anchor_id, level (0-6; 0 = preamble),
+                    text, word_count, and char_count
         - markdown: Pure markdown representation with anchors
+        - total_word_count: Total words across the entire tab
+        - total_char_count: Total characters across the entire tab
 
     Example response:
         {
             "success": true,
             "headings": [
-                {"anchor_id": "h.abc123", "level": 1, "text": "Introduction"},
-                {"anchor_id": "h.def456", "level": 2, "text": "Background"}
+                {"anchor_id": "", "level": 0, "text": "(preamble)",
+                 "word_count": 42, "char_count": 310},
+                {"anchor_id": "h.abc123", "level": 1, "text": "Introduction",
+                 "word_count": 350, "char_count": 2100},
+                {"anchor_id": "h.def456", "level": 2, "text": "Background",
+                 "word_count": 120, "char_count": 780}
             ],
-            "markdown": "# {^ h.abc123}Introduction\\n## {^ h.def456}Background"
+            "markdown": "{^ }(preamble) (42 words)\\n# {^ h.abc123}Introduction (350 words)\\n## {^ h.def456}Background (120 words)",
+            "total_word_count": 512,
+            "total_char_count": 3190
         }
     """
     try:
@@ -75,10 +102,14 @@ def get_hierarchy(
                     anchor_id=h.anchor_id,
                     level=h.level,
                     text=h.text,
+                    word_count=h.word_count,
+                    char_count=h.char_count,
                 )
                 for h in result.headings
             ],
             markdown=result.markdown,
+            total_word_count=result.total_word_count,
+            total_char_count=result.total_char_count,
         )
 
         return asdict(response)

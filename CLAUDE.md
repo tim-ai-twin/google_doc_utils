@@ -15,6 +15,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-02
 - Filesystem — YAML test definitions, markdown reports (002-mcp-discoverability-testing)
 - Python 3.11+ + google-api-python-client, mcp>=1.25.0 (existing) (131-document-tabs)
 - N/A (stateless — reads from Google Docs API) (131-document-tabs)
+- Python 3.11+ (existing project requirement) + google-api-python-client (existing), mcp>=1.25.0 (existing), FastMCP (existing) (132-large-doc-editing)
+- N/A (stateless — reads from Google Docs API, temp files managed by skill) (132-large-doc-editing)
 
 - Python 3.11+ (minimum version for modern type hints and async capabilities) (001-cloud-testing-oauth)
 
@@ -34,9 +36,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+ (minimum version for modern type hints and async capabilities): Follow standard conventions
 
 ## Recent Changes
+- 132-large-doc-editing: Added Python 3.11+ (existing project requirement) + google-api-python-client (existing), mcp>=1.25.0 (existing), FastMCP (existing)
 - 131-document-tabs: Added Python 3.11+ + google-api-python-client, mcp>=1.25.0 (existing)
 - 002-mcp-discoverability-testing: Added Python 3.11+ (matches existing project) + `mcp>=1.25.0` (existing), `anthropic>=0.40.0` (new, test harness only), `pyyaml` (test definitions)
-- 130-document-style-transfer: Added Python 3.11+ (existing project requirement) + google-api-python-client (existing), mcp>=1.25.0 (existing), dataclasses (stdlib)
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -220,14 +220,15 @@ class GoogleDocsConverter:
     # Read Operations (Google Docs -> MEBDF)
     # -------------------------------------------------------------------------
 
-    def read_tab(self, tab: TabReference) -> ExportResult:
-        """Read entire tab to MEBDF markdown.
+    def read_tab(self, tab: TabReference, format: str = "mebdf") -> ExportResult:
+        """Read entire tab to MEBDF or plain markdown.
 
         Args:
             tab: Reference to the document tab.
+            format: Output format - "mebdf" (default) or "plain".
 
         Returns:
-            ExportResult with MEBDF content and any warnings.
+            ExportResult with markdown content and any warnings.
 
         Raises:
             MultipleTabsError: If tab_id is empty and document has multiple tabs.
@@ -239,7 +240,7 @@ class GoogleDocsConverter:
         tab_id = resolve_tab_id(document, tab)
         body = get_tab_content(document, tab_id)
 
-        return export_body(document, body, tab_id)
+        return export_body(document, body, tab_id, format=format)
 
     def read_section(self, tab: TabReference, anchor_id: str) -> ExportResult:
         """Read a specific section to MEBDF markdown.
