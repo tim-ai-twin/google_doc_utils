@@ -88,8 +88,10 @@ class HeadingInfo:
 
     Attributes:
         anchor_id: Heading anchor ID for use in section operations.
-        level: Heading level (1-6 for H1-H6).
-        text: Heading text content.
+            An empty string refers to the preamble (content before the
+            first heading, or the entire tab if no headings exist).
+        level: Heading level (1-6 for H1-H6, 0 for the preamble entry).
+        text: Heading text content. "(preamble)" for the preamble entry.
         word_count: Words in this section (through next same-or-higher level heading).
         char_count: Characters in this section (text only).
     """

@@ -52,9 +52,12 @@ class HeadingAnchor:
     """A heading in the document hierarchy.
 
     Attributes:
-        anchor_id: Google Docs headingId (e.g., "h.abc123").
-        level: Heading level 1-6.
-        text: The heading text content.
+        anchor_id: Google Docs headingId (e.g., "h.abc123"), or empty
+            string for the preamble pseudo-entry.
+        level: Heading level 1-6, or 0 for the preamble pseudo-entry
+            (content before the first heading).
+        text: The heading text content, or "(preamble)" for the
+            preamble pseudo-entry.
         start_index: Character position in document.
         word_count: Words in this section (through next same-or-higher level heading).
         char_count: Characters in this section (text only, no markup).

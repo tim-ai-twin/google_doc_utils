@@ -162,15 +162,25 @@ def format_hierarchy(headings: list[HeadingAnchor]) -> str:
     Each heading is formatted as:
     ## {^ anchor_id}Heading Text
 
+    A preamble entry (level=0, anchor_id="") is rendered as:
+    {^ }(preamble) (N words)
+
+    so the empty anchor is discoverable and copy-pasteable into
+    read_section / write_section calls.
+
     Args:
         headings: List of HeadingAnchor objects.
 
     Returns:
-        Markdown string with one heading per line.
+        Markdown string with one entry per line.
     """
     lines: list[str] = []
 
     for heading in headings:
+        if heading.level == 0:
+            word_hint = f" ({heading.word_count} words)" if heading.word_count > 0 else ""
+            lines.append(f"{{^ }}{heading.text}{word_hint}")
+            continue
         prefix = "#" * heading.level
         anchor = f"{{^ {heading.anchor_id}}}" if heading.anchor_id else ""
         word_hint = f" ({heading.word_count} words)" if heading.word_count > 0 else ""
@@ -200,15 +210,29 @@ def get_hierarchy(body: dict[str, Any]) -> HierarchyResult:
     total_word_count = 0
     total_char_count = 0
 
-    # Add preamble counts to totals (not attributed to any heading)
+    counted_headings: list[HeadingAnchor] = []
+
+    # Expose preamble as a synthetic level=0 entry so LLMs discover the
+    # empty anchor for read_section / write_section on content that lives
+    # before the first heading (or in docs without any headings).
     preamble = next((s for s in sections if s.is_preamble), None)
     if preamble:
         pw, pc = counts.get(preamble.start_index, (0, 0))
         total_word_count += pw
         total_char_count += pc
+        if pw > 0:
+            counted_headings.append(
+                HeadingAnchor(
+                    anchor_id="",
+                    level=0,
+                    text="(preamble)",
+                    start_index=preamble.start_index,
+                    word_count=pw,
+                    char_count=pc,
+                )
+            )
 
     # Populate counts on each heading (HeadingAnchor is frozen, create new instances)
-    counted_headings: list[HeadingAnchor] = []
     for h in headings:
         wc, cc = counts.get(h.start_index, (0, 0))
         total_word_count += wc

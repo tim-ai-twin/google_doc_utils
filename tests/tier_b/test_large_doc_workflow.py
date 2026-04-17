@@ -156,9 +156,11 @@ class TestReadSection:
         """
         tab_ref = TabReference(document_id=SINGLE_TAB_DOC_ID)
         hier = converter.get_hierarchy(tab_ref)
-        assert len(hier.headings) > 0, "No headings in single-tab test doc"
+        # Skip the level=0 preamble pseudo-entry; we want a real heading.
+        real_headings = [h for h in hier.headings if h.level >= 1]
+        assert len(real_headings) > 0, "No real headings in single-tab test doc"
 
-        heading = hier.headings[0]
+        heading = real_headings[0]
         assert heading.anchor_id, "First heading has no anchor_id"
 
         result = converter.read_section(tab_ref, heading.anchor_id)

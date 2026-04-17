@@ -40,6 +40,11 @@ def get_hierarchy(
     Call this BEFORE using read_section or write_section to find
     the anchor_id for your target section.
 
+    If the tab contains content before the first heading (or has no
+    headings at all), the first entry will be a preamble pseudo-entry:
+    ``anchor_id=""``, ``level=0``, ``text="(preamble)"``. Pass the empty
+    anchor to ``read_section`` / ``write_section`` to target that region.
+
     Each heading includes ``word_count`` and ``char_count`` for the content
     under that section (up to the next heading of equal or higher level).
     The response also includes ``total_word_count`` and ``total_char_count``
@@ -61,8 +66,8 @@ def get_hierarchy(
     Returns:
         dict containing:
         - success: True if operation succeeded
-        - headings: List of headings with anchor_id, level (1-6), text,
-                    word_count, and char_count
+        - headings: List of headings with anchor_id, level (0-6; 0 = preamble),
+                    text, word_count, and char_count
         - markdown: Pure markdown representation with anchors
         - total_word_count: Total words across the entire tab
         - total_char_count: Total characters across the entire tab
@@ -71,14 +76,16 @@ def get_hierarchy(
         {
             "success": true,
             "headings": [
+                {"anchor_id": "", "level": 0, "text": "(preamble)",
+                 "word_count": 42, "char_count": 310},
                 {"anchor_id": "h.abc123", "level": 1, "text": "Introduction",
                  "word_count": 350, "char_count": 2100},
                 {"anchor_id": "h.def456", "level": 2, "text": "Background",
                  "word_count": 120, "char_count": 780}
             ],
-            "markdown": "# {^ h.abc123}Introduction\\n## {^ h.def456}Background",
-            "total_word_count": 470,
-            "total_char_count": 2880
+            "markdown": "{^ }(preamble) (42 words)\\n# {^ h.abc123}Introduction (350 words)\\n## {^ h.def456}Background (120 words)",
+            "total_word_count": 512,
+            "total_char_count": 3190
         }
     """
     try:

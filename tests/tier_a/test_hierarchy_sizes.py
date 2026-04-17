@@ -135,17 +135,25 @@ class TestHierarchySizes:
         assert result.headings == []
 
     def test_no_headings_counts_as_preamble(self):
-        """Document with no headings counts all content in totals."""
+        """Document with no headings exposes a single preamble entry."""
         body = _make_body(
             _make_paragraph("One two three four five.\n", start=1),
         )
         result = get_hierarchy(body)
-        assert result.headings == []
+
+        # Preamble is now surfaced so LLMs can discover the "" anchor.
+        assert len(result.headings) == 1
+        preamble = result.headings[0]
+        assert preamble.anchor_id == ""
+        assert preamble.level == 0
+        assert preamble.text == "(preamble)"
+        assert preamble.word_count == 5
+        assert preamble.char_count == len("One two three four five.")
         assert result.total_word_count == 5
         assert result.total_char_count == len("One two three four five.")
 
     def test_preamble_plus_heading(self):
-        """Preamble content is counted in totals but not in heading counts."""
+        """Preamble becomes a level=0 entry alongside the HEADING_1 section."""
         preamble = _make_paragraph("Preamble text here.\n", start=1)
         heading = _make_paragraph(
             "Introduction\n", start=21, style="HEADING_1", heading_id="h.intro"
@@ -156,14 +164,23 @@ class TestHierarchySizes:
         body = _make_body(preamble, heading, section_text)
         result = get_hierarchy(body)
 
-        # Preamble: "Preamble text here." = 3 words
-        # Section: heading text + section body text
-        assert result.total_word_count > 0
-        # Heading section should have its own counts
-        assert len(result.headings) == 1
-        h = result.headings[0]
-        assert h.word_count > 0
-        assert h.char_count > 0
+        assert len(result.headings) == 2
+
+        preamble_entry = result.headings[0]
+        assert preamble_entry.anchor_id == ""
+        assert preamble_entry.level == 0
+        assert preamble_entry.word_count > 0
+        assert preamble_entry.char_count > 0
+
+        h1_entry = result.headings[1]
+        assert h1_entry.anchor_id == "h.intro"
+        assert h1_entry.level == 1
+        assert h1_entry.word_count > 0
+        assert h1_entry.char_count > 0
+
+        assert result.total_word_count == (
+            preamble_entry.word_count + h1_entry.word_count
+        )
 
     def test_multi_heading_section_counts(self):
         """Multiple headings get accurate per-section counts."""
